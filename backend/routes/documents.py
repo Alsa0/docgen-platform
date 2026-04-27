@@ -31,6 +31,11 @@ class PreviewRequest(BaseModel):
     config: dict
 
 
+class RFPRequest(BaseModel):
+    """Requête d'analyse d'email RFP."""
+    email_content: str
+
+
 @router.get("/templates")
 async def get_templates():
     """Retourne la liste des 5 templates avec leurs champs."""
@@ -199,4 +204,20 @@ async def preview_document(request: PreviewRequest):
         raise
     except Exception as e:
         logger.error(f"Erreur aperçu document : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/analyze-rfp")
+async def analyze_rfp(request: RFPRequest):
+    """
+    Analyse un email RFP et retourne des propositions de BOM.
+    """
+    try:
+        if not request.email_content:
+            raise HTTPException(status_code=400, detail="Le contenu de l'email est requis")
+            
+        analysis = await ai_service.analyze_rfp_email(request.email_content)
+        return analysis
+    except Exception as e:
+        logger.error(f"Erreur analyse RFP : {e}")
         raise HTTPException(status_code=500, detail=str(e))

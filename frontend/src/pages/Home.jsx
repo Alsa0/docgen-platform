@@ -1,23 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Layers, FileText, Briefcase, Wrench, Network, Globe, ArrowRight } from 'lucide-react';
+import { Layers, FileText, Briefcase, Wrench, Network, Globe, ArrowRight, Mail } from 'lucide-react';
 
 const Home = () => {
   const cards = [
     {
-      type: 'bom',
-      title: 'Bill of Materials (BOM)',
-      description: "Générer une liste d'équipements avec prix du marché",
-      icon: <Layers size={32} className="mb-4" color="var(--accent-tertiary)" />,
-      path: '/generate/bom',
-      search: true
-    },
-    {
-      type: 'sow',
-      title: 'Scope of Work (SOW)',
-      description: "Détailler les travaux et tâches d'un projet",
-      icon: <FileText size={32} className="mb-4" color="var(--success)" />,
-      path: '/generate/sow',
+      type: 'unified',
+      title: 'BOM & SOW (Unifié)',
+      description: "Analyse d'email RFP et génération de la liste d'équipements et travaux",
+      icon: <Layers size={32} className="mb-4" color="var(--accent-primary)" />,
+      path: '/generate/unified',
       search: true
     },
     {

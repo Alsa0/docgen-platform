@@ -6,6 +6,7 @@ import GenerateSOW from './pages/GenerateSOW';
 import GenerateOT from './pages/GenerateOT';
 import GenerateIR from './pages/GenerateIR';
 import GenerateLLD from './pages/GenerateLLD';
+import UnifiedGenerator from './pages/UnifiedGenerator';
 
 function App() {
   return (
@@ -19,6 +20,9 @@ function App() {
           <Route path="/generate/ot" element={<GenerateOT />} />
           <Route path="/generate/ir" element={<GenerateIR />} />
           <Route path="/generate/lld" element={<GenerateLLD />} />
+          <Route path="/generate/unified" element={<UnifiedGenerator />} />
+          <Route path="/generate/bom" element={<UnifiedGenerator />} />
+          <Route path="/generate/sow" element={<UnifiedGenerator />} />
         </Routes>
       </main>
     </div>

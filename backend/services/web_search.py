@@ -1,13 +1,13 @@
 # Service de recherche web pour équipements et datasheets
-# Utilise l'API Claude avec web_search tool natif
+# Utilise l'API Gemini avec Google Search Grounding
 
 import json
 import logging
-from anthropic import AsyncAnthropic
-from config.settings import ANTHROPIC_API_KEY, CLAUDE_MODEL
+import google.generativeai as genai
+from config.settings import GEMINI_API_KEY, GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
-client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 async def search_equipment(
@@ -17,7 +17,7 @@ async def search_equipment(
     currency: str = "MGA"
 ) -> list[dict]:
     """
-    Recherche des équipements sur internet via Claude web_search.
+    Recherche des équipements sur internet via Gemini Google Search.
     Retourne une liste structurée d'équipements avec prix et fournisseurs.
     """
     try:
@@ -28,9 +28,8 @@ async def search_equipment(
 **Budget** : {budget_range} {currency}
 
 Trouve les équipements réels avec leurs prix actuels, marques, modèles et fournisseurs.
-Privilégie les sources fiables (sites constructeurs, distributeurs officiels).
 
-Retourne UNIQUEMENT un JSON valide :
+Retourne UNIQUEMENT un JSON valide contenant une liste d'objets :
 [
   {{
     "nom": "Nom de l'équipement",
@@ -47,19 +46,12 @@ Retourne UNIQUEMENT un JSON valide :
 
 Retourne 5 à 10 résultats pertinents."""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
         )
-
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        results = _parse_json(result_text)
+        response = await model.generate_content_async(prompt)
+        results = _parse_json(response.text)
         return results if isinstance(results, list) else []
 
     except Exception as e:
@@ -74,7 +66,6 @@ async def search_datasheet(
 ) -> dict:
     """
     Recherche la fiche technique (datasheet) d'un équipement.
-    Retourne les spécifications techniques détaillées.
     """
     try:
         prompt = f"""Recherche la datasheet et les spécifications techniques de cet équipement :
@@ -103,19 +94,12 @@ Retourne UNIQUEMENT un JSON valide :
   "source": "Site source de l'information"
 }}"""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
         )
-
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        result = _parse_json(result_text)
+        response = await model.generate_content_async(prompt)
+        result = _parse_json(response.text)
         return result if isinstance(result, dict) else {"nom": equipment_name, "error": "Données non trouvées"}
 
     except Exception as e:
@@ -137,8 +121,6 @@ async def search_prices(equipment_list: list[dict]) -> list[dict]:
 
 {equipments_str}
 
-Pour chaque équipement, trouve le prix actuel chez différents fournisseurs.
-
 Retourne UNIQUEMENT un JSON valide (liste dans le même ordre) :
 [
   {{
@@ -155,19 +137,12 @@ Retourne UNIQUEMENT un JSON valide (liste dans le même ordre) :
   }}
 ]"""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
         )
-
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        results = _parse_json(result_text)
+        response = await model.generate_content_async(prompt)
+        results = _parse_json(response.text)
         return results if isinstance(results, list) else []
 
     except Exception as e:
@@ -177,6 +152,8 @@ Retourne UNIQUEMENT un JSON valide (liste dans le même ordre) :
 
 def _parse_json(text: str):
     """Parse un JSON depuis une réponse textuelle."""
+    if not text:
+        return None
     import re
     try:
         return json.loads(text.strip())

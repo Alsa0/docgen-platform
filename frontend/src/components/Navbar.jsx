@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Layers, FileText, Briefcase, Wrench, Network, LayoutTemplate } from 'lucide-react';
+import { Layers, FileText, Briefcase, Wrench, Network, LayoutTemplate, Mail } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
 
   const navLinks = [
-    { path: '/generate/bom', label: 'BOM', icon: <Layers size={18} /> },
-    { path: '/generate/sow', label: 'SOW', icon: <FileText size={18} /> },
+    { path: '/generate/unified', label: 'BOM & SOW', icon: <Layers size={18} /> },
     { path: '/generate/ot', label: 'OT', icon: <Briefcase size={18} /> },
     { path: '/generate/ir', label: 'IR', icon: <Wrench size={18} /> },
     { path: '/generate/lld', label: 'LLD', icon: <Network size={18} /> },

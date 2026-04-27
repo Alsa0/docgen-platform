@@ -1,15 +1,15 @@
-# Service d'intégration avec l'API Claude d'Anthropic
+# Service d'intégration avec l'API Google Gemini
 # Gère toutes les interactions IA pour la génération de contenu documentaire
 
 import json
 import logging
-from anthropic import AsyncAnthropic
-from config.settings import ANTHROPIC_API_KEY, CLAUDE_MODEL, COMPANY_NAME
+import google.generativeai as genai
+from config.settings import GEMINI_API_KEY, GEMINI_MODEL, COMPANY_NAME
 
 logger = logging.getLogger(__name__)
 
-# Client Anthropic global
-client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+# Configurer l'API Gemini
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 async def generate_bom_content(
@@ -20,8 +20,7 @@ async def generate_bom_content(
     specific_equipment: str = ""
 ) -> list[dict]:
     """
-    Génère une liste d'équipements BOM en utilisant Claude avec web_search.
-    Recherche les équipements adaptés au projet sur internet.
+    Génère une liste d'équipements BOM en utilisant Gemini.
     Retourne une liste JSON structurée.
     """
     try:
@@ -34,13 +33,12 @@ Génère un Bill of Materials (BOM) détaillé pour ce projet.
 {f"**Équipements souhaités** : {specific_equipment}" if specific_equipment else ""}
 
 INSTRUCTIONS :
-1. Utilise la recherche web pour trouver les équipements réels avec leurs prix actuels
+1. Recherche les équipements réels avec leurs prix actuels
 2. Privilégie les fournisseurs accessibles depuis Madagascar
 3. Reste dans le budget indiqué
 4. Inclus tous les accessoires nécessaires (câbles, connecteurs, licences, etc.)
 
-Retourne UNIQUEMENT un JSON valide (pas de markdown, pas de texte avant/après) avec cette structure :
-[
+Retourne UNIQUEMENT un tableau JSON valide contenant des objets avec cette structure :
   {{
     "reference": "REF-001",
     "designation": "Nom complet de l'équipement",
@@ -53,25 +51,16 @@ Retourne UNIQUEMENT un JSON valide (pas de markdown, pas de texte avant/après) 
     "url": "https://...",
     "description": "Description courte et technique"
   }}
-]
 
 Génère entre 5 et 15 lignes d'équipements selon le projet."""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=8192,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
         )
-
-        # Extraire le texte de la réponse (peut contenir plusieurs blocs)
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        # Parser le JSON depuis la réponse
-        bom_items = _extract_json_from_response(result_text)
+        response = await model.generate_content_async(prompt)
+        
+        bom_items = _extract_json_from_response(response.text)
         if isinstance(bom_items, list):
             # Calculer les prix totaux
             for i, item in enumerate(bom_items):
@@ -93,8 +82,7 @@ async def generate_sow_content(
     bom_items: list[dict] | None = None
 ) -> dict:
     """
-    Génère le contenu d'un Scope of Work structuré.
-    Inclut : overview, objectifs, tâches détaillées, jalons, critères d'acceptation.
+    Génère le contenu d'un Scope of Work structuré avec Gemini.
     """
     try:
         bom_section = ""
@@ -118,12 +106,12 @@ async def generate_sow_content(
 **Critères d'acceptation** : {', '.join(config.get('criteres_acceptation', ['À définir']))}
 {bom_section}
 
-Retourne UNIQUEMENT un JSON valide avec cette structure :
+Retourne UNIQUEMENT un objet JSON valide avec cette structure exacte :
 {{
   "overview": "Résumé exécutif du projet...",
-  "objectifs": ["Objectif 1", "Objectif 2", ...],
-  "perimetre_inclus": ["Élément inclus 1", ...],
-  "perimetre_exclus": ["Élément exclu 1", ...],
+  "objectifs": ["Objectif 1", "Objectif 2"],
+  "perimetre_inclus": ["Élément inclus 1"],
+  "perimetre_exclus": ["Élément exclu 1"],
   "taches": [
     {{
       "numero": 1,
@@ -144,29 +132,24 @@ Retourne UNIQUEMENT un JSON valide avec cette structure :
       "livrables": ["Livrable associé"]
     }}
   ],
-  "hypotheses": ["Hypothèse 1", ...],
+  "hypotheses": ["Hypothèse 1"],
   "conditions_paiement": "30% à la commande, 40% à mi-parcours, 30% à la livraison"
 }}
 
 Génère entre 5 et 10 tâches détaillées et réalistes."""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=8192,
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
         )
-
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        sow_content = _extract_json_from_response(result_text)
+        
+        sow_content = _extract_json_from_response(response.text)
         if isinstance(sow_content, dict):
             return sow_content
 
         logger.warning("La réponse IA n'est pas un JSON valide pour le SOW")
-        return {"overview": result_text, "taches": [], "jalons": []}
+        return {"overview": response.text, "taches": [], "jalons": []}
 
     except Exception as e:
         logger.error(f"Erreur lors de la génération SOW via IA : {e}")
@@ -180,7 +163,6 @@ async def generate_ot_content(
 ) -> dict:
     """
     Génère le contenu d'une Offre Technique complète.
-    Sections : présentation entreprise, analyse besoin, solution, méthodologie, valeur ajoutée.
     """
     try:
         annexes = ""
@@ -225,22 +207,17 @@ Retourne UNIQUEMENT un JSON valide :
   "conditions_paiement": "{config.get('conditions_paiement', '30/40/30')}"
 }}"""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=8192,
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
         )
 
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        ot_content = _extract_json_from_response(result_text)
+        ot_content = _extract_json_from_response(response.text)
         if isinstance(ot_content, dict):
             return ot_content
 
-        return {"presentation_entreprise": result_text}
+        return {"presentation_entreprise": response.text}
 
     except Exception as e:
         logger.error(f"Erreur lors de la génération OT via IA : {e}")
@@ -250,7 +227,6 @@ Retourne UNIQUEMENT un JSON valide :
 async def generate_ir_content(config: dict) -> dict:
     """
     Génère le contenu d'un Rapport d'Intervention.
-    Analyse les travaux réalisés, problèmes et recommandations.
     """
     try:
         prompt = f"""Tu es un ingénieur terrain senior en IT/Télécom.
@@ -297,22 +273,17 @@ Retourne UNIQUEMENT un JSON valide :
   "conclusion": "Conclusion générale de l'intervention..."
 }}"""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=8192,
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
         )
 
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        ir_content = _extract_json_from_response(result_text)
+        ir_content = _extract_json_from_response(response.text)
         if isinstance(ir_content, dict):
             return ir_content
 
-        return {"resume_intervention": result_text}
+        return {"resume_intervention": response.text}
 
     except Exception as e:
         logger.error(f"Erreur lors de la génération IR via IA : {e}")
@@ -324,8 +295,7 @@ async def generate_lld_content(
     bom_items: list[dict] | None = None
 ) -> dict:
     """
-    Génère le contenu d'un Low Level Design Document.
-    Utilise web_search pour les datasheets et specs techniques.
+    Génère le contenu d'un Low Level Design Document avec Google Search Grounding.
     """
     try:
         equipements_str = "\n".join(config.get("equipements_principaux", []))
@@ -361,95 +331,151 @@ Génère un document Low Level Design (LLD) technique détaillé en français.
 **Contraintes** : {config.get('contraintes', 'Aucune')}
 
 INSTRUCTIONS :
-1. Recherche les datasheets et spécifications techniques des équipements mentionnés
-2. Propose un plan d'adressage IP complet et cohérent
-3. Détaille les configurations par équipement
+1. Propose un plan d'adressage IP complet et cohérent
+2. Détaille les configurations par équipement
 
-Retourne UNIQUEMENT un JSON valide :
+Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
 {{
-  "contexte_objectifs": "Description du contexte et des objectifs du projet...",
-  "architecture_generale": "Description de l'architecture générale...",
+  "contexte_objectifs": "Description du contexte et des objectifs...",
+  "architecture_generale": "Description de l'architecture...",
   "specifications_equipements": [
     {{
       "nom": "Nom de l'équipement",
       "marque_modele": "Marque Modèle",
-      "role": "Rôle dans l'architecture",
-      "specs_techniques": "Spécifications clés (ports, débit, etc.)",
-      "datasheet_url": "URL de la datasheet si trouvée",
-      "configuration_principale": "Configuration recommandée"
+      "role": "Rôle",
+      "specs_techniques": "Spécifications clés",
+      "datasheet_url": "URL",
+      "configuration_principale": "Configuration"
     }}
   ],
   "plan_adressage": [
     {{
       "vlan_id": 10,
-      "nom": "Nom du VLAN",
+      "nom": "VLAN",
       "reseau": "192.168.10.0/24",
       "passerelle": "192.168.10.1",
       "plage_dhcp": "192.168.10.100-200",
-      "usage": "Description de l'usage"
+      "usage": "Usage"
     }}
   ],
-  "schema_interconnexion": "Description textuelle détaillée des interconnexions...",
+  "schema_interconnexion": "Description des interconnexions...",
   "configurations_detaillees": [
     {{
       "equipement": "Nom",
-      "configuration": "Configuration détaillée (commandes ou paramètres)"
+      "configuration": "Configuration détaillée"
     }}
   ],
   "procedures_installation": [
     {{
       "etape": 1,
-      "titre": "Titre de l'étape",
-      "description": "Description détaillée",
-      "validation": "Test de validation"
+      "titre": "Titre",
+      "description": "Description",
+      "validation": "Test"
     }}
   ],
   "references_datasheets": [
     {{
       "equipement": "Nom",
-      "url": "URL de la datasheet",
-      "source": "Site source"
+      "url": "URL",
+      "source": "Source"
     }}
   ]
 }}"""
 
-        response = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=16384,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{"role": "user", "content": prompt}],
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
         )
+        response = await model.generate_content_async(prompt)
 
-        result_text = ""
-        for block in response.content:
-            if block.type == "text":
-                result_text += block.text
-
-        lld_content = _extract_json_from_response(result_text)
+        lld_content = _extract_json_from_response(response.text)
         if isinstance(lld_content, dict):
             return lld_content
 
-        return {"contexte_objectifs": result_text}
+        return {"contexte_objectifs": response.text}
 
     except Exception as e:
         logger.error(f"Erreur lors de la génération LLD via IA : {e}")
         raise
 
 
+async def analyze_rfp_email(email_content: str) -> dict:
+    """
+    Analyse un email de demande (RFP) et génère des propositions de BOM.
+    """
+    try:
+        prompt = f"""Tu es un expert en ingénierie IT et avant-vente. 
+Analyse cet email de demande de proposition (RFP) et génère 3 propositions techniques différentes (ex: Économique, Standard, Premium).
+
+**Contenu de l'Email** :
+{email_content}
+
+INSTRUCTIONS :
+1. Extrais les informations clés du projet (titre, client, budget estimé, type de projet).
+2. Pour chaque proposition (3 au total) :
+   - Donne-lui un titre (ex: "Solution Cisco Haute Performance")
+   - Donne une justification courte
+   - Génère une liste d'équipements (BOM) réelle avec prix du marché (utilise la recherche web)
+   - Calcule le total pour cette proposition
+
+Retourne UNIQUEMENT un objet JSON valide avec cette structure :
+{{
+  "project_info": {{
+    "title": "Titre suggéré",
+    "client": "Nom du client identifié",
+    "type": "Type de projet",
+    "description": "Résumé du besoin"
+  }},
+  "proposals": [
+    {{
+      "id": 1,
+      "label": "Nom de la proposition",
+      "summary": "Pourquoi cette solution ?",
+      "total_estimated": 0,
+      "currency": "MGA",
+      "bom_items": [
+        {{
+          "designation": "Equipement",
+          "marque": "Marque",
+          "modele": "Modele",
+          "quantite": 1,
+          "prix_unitaire": 0,
+          "description": "..."
+        }}
+      ]
+    }}
+  ]
+}}"""
+
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            tools='google_search_retrieval'
+        )
+        response = await model.generate_content_async(prompt)
+        
+        analysis = _extract_json_from_response(response.text)
+        if isinstance(analysis, dict):
+            return analysis
+
+        logger.warning("La réponse IA n'est pas un JSON valide pour l'analyse RFP")
+        return {"project_info": {}, "proposals": []}
+
+    except Exception as e:
+        logger.error(f"Erreur lors de l'analyse RFP via IA : {e}")
+        raise
+
+
 def _extract_json_from_response(text: str) -> dict | list | None:
-    """
-    Extrait un objet JSON depuis une réponse textuelle de Claude.
-    Gère les cas où le JSON est entouré de markdown ou de texte.
-    """
-    # Essayer de parser directement
+    """Extrait un objet JSON depuis une réponse textuelle."""
+    if not text:
+        return None
+        
     try:
         return json.loads(text.strip())
     except json.JSONDecodeError:
         pass
 
-    # Chercher un bloc JSON dans le texte (entre ``` ou entre [ ] ou { })
     import re
-    # Chercher un bloc ```json ... ```
     json_block = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?```', text)
     if json_block:
         try:
@@ -457,12 +483,10 @@ def _extract_json_from_response(text: str) -> dict | list | None:
         except json.JSONDecodeError:
             pass
 
-    # Chercher le premier [ ... ] ou { ... } complet
     for start_char, end_char in [('[', ']'), ('{', '}')]:
         start_idx = text.find(start_char)
         if start_idx == -1:
             continue
-        # Trouver la fermeture correspondante
         depth = 0
         for i in range(start_idx, len(text)):
             if text[i] == start_char:

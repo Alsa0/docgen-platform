@@ -82,6 +82,13 @@ export const searchPrices = async (equipmentList) => {
   return response.data;
 };
 
+export const analyzeRFP = async (emailContent) => {
+  const response = await apiClient.post('/api/documents/analyze-rfp', {
+    email_content: emailContent,
+  });
+  return response.data;
+};
+
 export default {
   getTemplates,
   generateDocument,
@@ -89,4 +96,5 @@ export default {
   searchEquipment,
   searchDatasheet,
   searchPrices,
+  analyzeRFP,
 };

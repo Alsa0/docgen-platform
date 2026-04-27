@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Clés API ---
-ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 
 # --- Configuration de l'application ---
@@ -19,8 +19,8 @@ ALLOWED_ORIGINS: list[str] = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173
 COMPANY_NAME: str = os.getenv("COMPANY_NAME", "Ma Société")
 COMPANY_LOGO_PATH: str = os.getenv("COMPANY_LOGO_PATH", "assets/logo.png")
 
-# --- Modèle Claude ---
-CLAUDE_MODEL: str = "claude-opus-4-6"
+# --- Modèle Gemini ---
+GEMINI_MODEL: str = "gemini-1.5-flash"
 
 # --- Répertoire de sortie ---
 OUTPUT_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
@@ -35,8 +35,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def validate_config() -> dict:
     """Valide que toutes les variables critiques sont configurées."""
     errors = []
-    if not ANTHROPIC_API_KEY or ANTHROPIC_API_KEY.startswith("sk-ant-xxxx"):
-        errors.append("ANTHROPIC_API_KEY non configurée")
+    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AIzaSy"):
+        errors.append("GEMINI_API_KEY non configurée")
     if not TAVILY_API_KEY or TAVILY_API_KEY.startswith("tvly-xxxx"):
         errors.append("TAVILY_API_KEY non configurée")
     return {
