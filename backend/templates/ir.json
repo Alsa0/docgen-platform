@@ -1,0 +1,27 @@
+{
+  "doc_type": "ir",
+  "title": "Rapport d'Intervention",
+  "description": "Compte-rendu d'intervention technique terrain",
+  "use_web_search": false,
+  "fields": {
+    "client_nom": {"type": "text", "required": true, "label": "Nom du client"},
+    "client_contact": {"type": "text", "required": false, "label": "Contact client"},
+    "site_intervention": {"type": "text", "required": true, "label": "Site / Lieu d'intervention"},
+    "date_intervention": {"type": "date", "required": true, "label": "Date d'intervention"},
+    "heure_debut": {"type": "time", "required": false, "label": "Heure de début"},
+    "heure_fin": {"type": "time", "required": false, "label": "Heure de fin"},
+    "techniciens": {"type": "list", "required": true, "label": "Techniciens intervenants"},
+    "reference_ticket": {"type": "text", "required": false, "label": "N° de ticket / référence"},
+    "type_intervention": {"type": "select", "required": true, "label": "Type d'intervention", "options": ["installation", "maintenance préventive", "maintenance corrective", "dépannage", "audit", "configuration", "formation", "autre"]},
+    "description_mission": {"type": "textarea", "required": true, "label": "Description de la mission / objectif"},
+    "travaux_realises": {"type": "list", "required": true, "label": "Travaux réalisés (liste des tâches)"},
+    "observations": {"type": "textarea", "required": false, "label": "Observations techniques"},
+    "problemes_rencontres": {"type": "textarea", "required": false, "label": "Problèmes rencontrés"},
+    "solutions_appliquees": {"type": "textarea", "required": false, "label": "Solutions appliquées"},
+    "statut": {"type": "select", "required": true, "label": "Statut de l'intervention", "options": ["terminé", "en cours", "action requise"]},
+    "actions_requises": {"type": "list", "required": false, "label": "Actions requises (si statut = action requise)"},
+    "recommandations": {"type": "textarea", "required": false, "label": "Recommandations techniques"},
+    "pieces_utilisees": {"type": "list", "required": false, "label": "Pièces / équipements utilisés"},
+    "prochaine_intervention": {"type": "date", "required": false, "label": "Date prochaine intervention prévue"}
+  }
+}

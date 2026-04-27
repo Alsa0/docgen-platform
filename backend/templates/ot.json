@@ -1,0 +1,25 @@
+{
+  "doc_type": "ot",
+  "title": "Offre Technique",
+  "description": "Document commercial de proposition technique complète",
+  "use_web_search": false,
+  "fields": {
+    "client_nom": {"type": "text", "required": true, "label": "Nom du client"},
+    "client_contact": {"type": "text", "required": true, "label": "Contact client"},
+    "client_adresse": {"type": "text", "required": false, "label": "Adresse client"},
+    "projet_titre": {"type": "text", "required": true, "label": "Titre du projet"},
+    "projet_description": {"type": "textarea", "required": true, "label": "Description du besoin client"},
+    "type_projet": {"type": "select", "required": true, "label": "Type", "options": ["infrastructure réseau", "déploiement serveurs", "sécurité", "audiovisuel", "énergie solaire", "câblage", "téléphonie", "développement", "conseil", "formation", "maintenance", "autre"]},
+    "budget_total": {"type": "number", "required": true, "label": "Montant total de l'offre"},
+    "devise": {"type": "select", "required": true, "options": ["MGA", "EUR", "USD"], "default": "MGA"},
+    "delai_jours": {"type": "number", "required": true, "label": "Délai de réalisation (jours)"},
+    "date_offre": {"type": "date", "required": true, "label": "Date de l'offre"},
+    "validite_jours": {"type": "number", "required": false, "default": 30, "label": "Validité (jours)"},
+    "version": {"type": "text", "required": false, "default": "1.0", "label": "Version du document"},
+    "equipe": {"type": "list", "required": false, "label": "Équipe projet"},
+    "inclure_sow": {"type": "boolean", "required": false, "label": "Inclure résumé SOW en annexe", "default": true},
+    "inclure_bom": {"type": "boolean", "required": false, "label": "Inclure résumé BOM en annexe", "default": true},
+    "conditions_paiement": {"type": "textarea", "required": false, "label": "Conditions de paiement"},
+    "reference_offre": {"type": "text", "required": false, "label": "Référence de l'offre"}
+  }
+}

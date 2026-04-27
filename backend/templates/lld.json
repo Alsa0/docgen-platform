@@ -1,0 +1,23 @@
+{
+  "doc_type": "lld",
+  "title": "Low Level Design Document",
+  "description": "Document technique détaillé d'architecture système et réseau",
+  "use_web_search": true,
+  "fields": {
+    "client_nom": {"type": "text", "required": true, "label": "Nom du client"},
+    "projet_titre": {"type": "text", "required": true, "label": "Titre du projet"},
+    "projet_description": {"type": "textarea", "required": true, "label": "Description du système à concevoir"},
+    "type_projet": {"type": "select", "required": true, "label": "Type", "options": ["réseau LAN/WAN", "infrastructure serveurs", "sécurité réseau", "datacenter", "Wi-Fi", "VoIP", "hybride", "autre"]},
+    "version": {"type": "text", "required": false, "default": "1.0", "label": "Version"},
+    "date_document": {"type": "date", "required": true, "label": "Date du document"},
+    "auteur": {"type": "text", "required": true, "label": "Auteur / Ingénieur"},
+    "plage_ip": {"type": "text", "required": false, "label": "Plage d'adressage IP (ex: 192.168.1.0/24)"},
+    "vlan_list": {"type": "list", "required": false, "label": "Liste des VLANs (ID - Nom - Usage)"},
+    "equipements_principaux": {"type": "list", "required": true, "label": "Équipements principaux (marque, modèle)"},
+    "topologie": {"type": "select", "required": false, "label": "Topologie réseau", "options": ["étoile", "hiérarchique 3 couches", "hiérarchique 2 couches", "maillée", "hybride"]},
+    "exigences_securite": {"type": "textarea", "required": false, "label": "Exigences de sécurité"},
+    "exigences_performance": {"type": "textarea", "required": false, "label": "Exigences de performance / bande passante"},
+    "contraintes": {"type": "textarea", "required": false, "label": "Contraintes techniques ou environnementales"},
+    "inclure_bom": {"type": "boolean", "required": false, "label": "Inclure un BOM détaillé", "default": true}
+  }
+}

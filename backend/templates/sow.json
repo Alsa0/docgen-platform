@@ -1,0 +1,23 @@
+{
+  "doc_type": "sow",
+  "title": "Scope of Work",
+  "description": "Détail des travaux et tâches à réaliser",
+  "use_web_search": true,
+  "fields": {
+    "client_nom": {"type": "text", "required": true, "label": "Nom du client"},
+    "client_contact": {"type": "text", "required": false, "label": "Contact client"},
+    "projet_titre": {"type": "text", "required": true, "label": "Titre du projet"},
+    "projet_description": {"type": "textarea", "required": true, "label": "Description complète du projet"},
+    "type_projet": {"type": "select", "required": true, "label": "Type", "options": ["infrastructure réseau", "déploiement serveurs", "sécurité", "audiovisuel", "énergie solaire", "câblage", "téléphonie", "développement", "conseil", "formation", "maintenance", "autre"]},
+    "date_debut": {"type": "date", "required": true, "label": "Date de début"},
+    "date_fin": {"type": "date", "required": true, "label": "Date de fin"},
+    "budget_service": {"type": "number", "required": true, "label": "Budget service/main d'œuvre"},
+    "budget_equipements": {"type": "number", "required": false, "label": "Budget équipements (si inclus)"},
+    "devise": {"type": "select", "required": true, "options": ["MGA", "EUR", "USD"], "default": "MGA"},
+    "equipe": {"type": "list", "required": false, "label": "Membres de l'équipe et rôles"},
+    "livrables": {"type": "list", "required": true, "label": "Livrables attendus"},
+    "criteres_acceptation": {"type": "list", "required": true, "label": "Critères d'acceptation"},
+    "exclusions": {"type": "list", "required": false, "label": "Ce qui est exclu du périmètre"},
+    "inclure_bom": {"type": "boolean", "required": false, "label": "Générer aussi un BOM équipements", "default": false}
+  }
+}

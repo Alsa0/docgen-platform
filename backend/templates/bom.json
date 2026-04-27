@@ -1,0 +1,18 @@
+{
+  "doc_type": "bom",
+  "title": "Bill of Materials",
+  "description": "Liste des équipements proposés pour un projet",
+  "use_web_search": true,
+  "fields": {
+    "client_nom": {"type": "text", "required": true, "label": "Nom du client"},
+    "client_contact": {"type": "text", "required": false, "label": "Contact client"},
+    "projet_titre": {"type": "text", "required": true, "label": "Titre du projet"},
+    "projet_description": {"type": "textarea", "required": true, "label": "Description du projet et besoins"},
+    "type_projet": {"type": "select", "required": true, "label": "Type de projet", "options": ["infrastructure réseau", "déploiement serveurs", "sécurité", "audiovisuel", "énergie solaire", "câblage", "téléphonie", "autre"]},
+    "budget_total": {"type": "number", "required": true, "label": "Budget total disponible"},
+    "devise": {"type": "select", "required": true, "label": "Devise", "options": ["MGA", "EUR", "USD"], "default": "MGA"},
+    "reference_projet": {"type": "text", "required": false, "label": "Référence projet"},
+    "validite_jours": {"type": "number", "required": false, "label": "Validité de l'offre (jours)", "default": 30},
+    "equipements_libres": {"type": "textarea", "required": false, "label": "Équipements spécifiques souhaités (optionnel)"}
+  }
+}
