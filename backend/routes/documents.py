@@ -91,12 +91,16 @@ async def generate_document(request: GenerateRequest):
                         currency=config.get("devise", "MGA"),
                         project_type=config.get("type_projet", ""),
                     )
+                sow_content = await ai_service.generate_sow_content(
+                    project_description=config.get("projet_description", ""),
                     config=config,
                     bom_items=bom_items if request.include_bom else None,
                 )
-            
+
             if request.export_format == "xlsx":
-                filepath = excel_generator.generate_excel_sow(config, sow_content, bom_items if request.include_bom else None)
+                filepath = excel_generator.generate_excel_sow(
+                    config, sow_content, bom_items if request.include_bom else None
+                )
             else:
                 filepath = doc_generator.generate_sow_docx(
                     config, sow_content, bom_items if request.include_bom else None

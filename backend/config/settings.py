@@ -35,9 +35,9 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def validate_config() -> dict:
     """Valide que toutes les variables critiques sont configurées."""
     errors = []
-    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AIzaSy"):
+    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AIzaSyA4CbFunAaZACDmW-2dO0AI4kq2ViYAH98"):
         errors.append("GEMINI_API_KEY non configurée")
-    if not TAVILY_API_KEY or TAVILY_API_KEY.startswith("tvly-xxxx"):
+    if not TAVILY_API_KEY or TAVILY_API_KEY.startswith("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"):
         errors.append("TAVILY_API_KEY non configurée")
     return {
         "valid": len(errors) == 0,

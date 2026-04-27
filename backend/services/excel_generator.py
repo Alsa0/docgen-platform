@@ -7,7 +7,7 @@ from config.settings import OUTPUT_DIR, TEMPLATES_DIR
 
 def generate_excel_bom(config, bom_items):
     """Génère un fichier Excel BOM basé sur le template client."""
-    template_path = os.path.join(TEMPLATES_DIR, "BOM 1.xlsx")
+    template_path = os.path.join(TEMPLATES_DIR, "BOM_1.xlsx")
     filename = f"BOM_{config.get('client_nom', 'client')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     output_path = os.path.join(OUTPUT_DIR, filename)
     
@@ -45,7 +45,7 @@ def generate_excel_bom(config, bom_items):
 
 def generate_excel_sow(config, sow_content, bom_items=None):
     """Génère un fichier Excel SOW basé sur le template client."""
-    template_path = os.path.join(TEMPLATES_DIR, "SOW 1.xlsx")
+    template_path = os.path.join(TEMPLATES_DIR, "SOW_1.xlsx")
     filename = f"SOW_{config.get('client_nom', 'client')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     output_path = os.path.join(OUTPUT_DIR, filename)
     
