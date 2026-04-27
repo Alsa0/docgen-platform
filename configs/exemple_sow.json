@@ -1,0 +1,36 @@
+{
+  "client_nom": "Ministère de la Santé Publique",
+  "client_contact": "Direction des Systèmes d'Information",
+  "projet_titre": "Déploiement Serveurs CHU",
+  "projet_description": "Installation et configuration de 3 serveurs physiques Dell PowerEdge R750 avec virtualisation VMware vSphere pour héberger le nouveau système d'information hospitalier. Configuration du stockage SAN et des sauvegardes Veeam.",
+  "type_projet": "déploiement serveurs",
+  "date_debut": "2026-06-01",
+  "date_fin": "2026-06-15",
+  "budget_service": 15000000,
+  "budget_equipements": 120000000,
+  "devise": "MGA",
+  "equipe": [
+    "1 Chef de projet (Supervision et validation)",
+    "2 Ingénieurs Systèmes (Installation, configuration VMware et SAN)"
+  ],
+  "livrables": [
+    "Document d'Architecture Détaillée (LLD)",
+    "Serveurs physiques installés en baie et câblés",
+    "Cluster VMware vSphere fonctionnel",
+    "Système de sauvegarde Veeam configuré",
+    "Document de recette (VAB)",
+    "Manuel d'exploitation"
+  ],
+  "criteres_acceptation": [
+    "Tous les équipements matériels sont opérationnels sans erreur au niveau matériel (iDRAC)",
+    "Le cluster vSphere tolère la panne d'un hôte physique (HA testé)",
+    "Les sauvegardes de test s'exécutent avec succès et la restauration est validée",
+    "Signature du procès-verbal de recette par le client"
+  ],
+  "exclusions": [
+    "Migration des données depuis l'ancien système (à la charge du client)",
+    "Fourniture des licences Windows Server (déjà acquises par le client)",
+    "Modification de l'infrastructure réseau existante"
+  ],
+  "inclure_bom": true
+}

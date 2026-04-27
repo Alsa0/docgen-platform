@@ -1,0 +1,23 @@
+{
+  "client_nom": "Groupe Filatex",
+  "client_contact": "Direction Générale",
+  "client_adresse": "Zone Forello, Tanjombato, Antananarivo",
+  "projet_titre": "Système de Vidéosurveillance IP et Contrôle d'Accès",
+  "projet_description": "Mise en place d'un système complet de sécurité pour le nouveau bâtiment administratif, comprenant 45 caméras IP haute définition, un NVR avec 30 jours de rétention, et 12 portes équipées de contrôle d'accès par badge et biométrie, centralisés sur une plateforme logicielle unique.",
+  "type_projet": "sécurité",
+  "budget_total": 85000000,
+  "devise": "MGA",
+  "delai_jours": 45,
+  "date_offre": "2026-05-15",
+  "validite_jours": 60,
+  "version": "1.0",
+  "equipe": [
+    "1 Chef de Projet Sécurité",
+    "2 Techniciens Câbleurs",
+    "1 Ingénieur Sécurité Électronique"
+  ],
+  "inclure_sow": true,
+  "inclure_bom": true,
+  "conditions_paiement": "40% à la signature du bon de commande\n40% à la livraison des équipements sur site\n20% après installation, test et signature du PV de réception",
+  "reference_offre": "OT-SEC-26-042"
+}

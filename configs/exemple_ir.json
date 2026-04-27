@@ -1,0 +1,31 @@
+{
+  "client_nom": "Telma Madagascar",
+  "client_contact": "NOC Center",
+  "site_intervention": "Datacenter Andraharo",
+  "date_intervention": "2026-04-26",
+  "heure_debut": "09:00",
+  "heure_fin": "14:30",
+  "techniciens": [
+    "Jean Rakoto (Ingénieur Support Niveau 3)",
+    "Hery Rabe (Technicien Datacenter)"
+  ],
+  "reference_ticket": "INC-2026-8854",
+  "type_intervention": "maintenance corrective",
+  "description_mission": "Investigation et résolution d'un problème de latence élevée et pertes de paquets intermittentes sur le lien fibre de l'agrégateur B vers le cœur de réseau.",
+  "travaux_realises": [
+    "Analyse des logs sur l'agrégateur B (Cisco ASR) et le routeur Core",
+    "Inspection physique des jarretières optiques entre la baie 12 et la baie 04",
+    "Mesure de puissance optique (OTDR) sur le lien fibre posant problème",
+    "Remplacement du module SFP+ 10G défectueux sur le port Te0/1/2 de l'agrégateur B",
+    "Tests de charge (iperf) et validation de la disparition de la latence"
+  ],
+  "observations": "Le module SFP+ présentait une dégradation du laser entraînant des erreurs CRC sur l'interface, causant les pertes de paquets.",
+  "problemes_rencontres": "Le câble fibre était très tendu dans l'organisateur de câbles, ce qui a pu contribuer à la fatigue du module SFP+.",
+  "solutions_appliquees": "Remplacement du transceiver optique et réorganisation du cheminement de la jarretière pour réduire la tension mécanique.",
+  "statut": "terminé",
+  "recommandations": "Il est recommandé de vérifier la tension des jarretières optiques dans l'ensemble de la baie 12 lors de la prochaine maintenance préventive pour éviter des incidents similaires sur d'autres liens critiques.",
+  "pieces_utilisees": [
+    "1x Transceiver Cisco SFP-10G-LR (Ref: SFP-10G-LR=)",
+    "1x Jarretière optique LC/LC Monomode 3m"
+  ]
+}

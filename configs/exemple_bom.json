@@ -1,0 +1,12 @@
+{
+  "client_nom": "Banque Centrale de Madagascar",
+  "client_contact": "M. Rakoto - DSI",
+  "projet_titre": "Refonte Infrastructure Réseau Siège",
+  "projet_description": "Mise à niveau complète du réseau LAN du siège principal incluant le cœur de réseau, la distribution et l'accès pour 500 utilisateurs, avec intégration Wi-Fi 6 et sécurité périmétrique.",
+  "type_projet": "infrastructure réseau",
+  "budget_total": 250000000,
+  "devise": "MGA",
+  "reference_projet": "REF-BCM-2026-001",
+  "validite_jours": 45,
+  "equipements_libres": "Switches Cisco Catalyst série 9000 pour le cœur, points d'accès Ubiquiti Unifi U6 Pro, Firewall Fortinet FortiGate 100F. Câblage Cat6A complet."
+}

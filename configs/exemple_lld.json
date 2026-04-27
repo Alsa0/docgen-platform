@@ -1,0 +1,25 @@
+{
+  "client_nom": "Ravinala Airports",
+  "projet_titre": "Extension Réseau Wi-Fi Zone d'Embarquement",
+  "projet_description": "Conception de l'architecture pour l'extension de la couverture Wi-Fi haute densité dans la nouvelle zone d'embarquement international pour supporter jusqu'à 1000 connexions simultanées.",
+  "type_projet": "Wi-Fi",
+  "version": "1.2",
+  "date_document": "2026-05-02",
+  "auteur": "Lova Andrianjafy - Architecte Réseau",
+  "plage_ip": "10.50.0.0/16",
+  "vlan_list": [
+    "VLAN 10 - Management (10.50.10.0/24)",
+    "VLAN 100 - WiFi Public (10.50.100.0/22)",
+    "VLAN 200 - WiFi Staff (10.50.200.0/24)"
+  ],
+  "equipements_principaux": [
+    "Aruba AP-535 (Points d'accès Wi-Fi 6 haute densité)",
+    "Aruba 7210 Mobility Controller",
+    "Aruba 2930M 48G PoE+ (Switch d'accès)"
+  ],
+  "topologie": "étoile",
+  "exigences_securite": "Le réseau public doit être isolé (Client Isolation) et utiliser un portail captif existant. Le réseau Staff utilise WPA3-Enterprise avec authentification RADIUS sur l'Active Directory.",
+  "exigences_performance": "Capacité minimale de 5 Mbps par utilisateur simultané. Roaming transparent (< 50ms) entre les points d'accès.",
+  "contraintes": "Les points d'accès doivent être intégrés de manière esthétique dans le faux plafond. Le câblage ne doit pas dépasser 90 mètres depuis le local technique.",
+  "inclure_bom": true
+}
