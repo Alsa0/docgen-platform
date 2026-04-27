@@ -18,6 +18,7 @@ const UnifiedGenerator = () => {
     budget_total: 0
   });
   const [isGenerating, setIsGenerating] = useState({ bom: false, sow: false });
+  const [exportFormat, setExportFormat] = useState('docx'); // docx or xlsx
 
   // Update items when proposal changes
   useEffect(() => {
@@ -67,7 +68,8 @@ const UnifiedGenerator = () => {
         true, 
         items, 
         type === 'sow', // include_bom for SOW
-        false
+        false,
+        exportFormat
       );
     } catch (error) {
       console.error(`${type} generation failed`, error);
@@ -191,7 +193,25 @@ const UnifiedGenerator = () => {
           </div>
         </section>
 
-        {/* Section 4: Generation Footer */}
+        {/* Section 4: Format Selection */}
+        {items.length > 0 && (
+          <div className="flex justify-center gap-4 mb-2 animate-fade-in">
+            <button 
+              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${exportFormat === 'docx' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+              onClick={() => setExportFormat('docx')}
+            >
+              Format Word (.docx)
+            </button>
+            <button 
+              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${exportFormat === 'xlsx' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+              onClick={() => setExportFormat('xlsx')}
+            >
+              Format Excel (.xlsx)
+            </button>
+          </div>
+        )}
+
+        {/* Section 5: Generation Footer */}
         <div className={`flex flex-col md:flex-row gap-6 ${!items.length && 'opacity-50 pointer-events-none'}`}>
           <div className="flex-1 glass-card p-6 flex items-center justify-between hover:bg-indigo-500/5 transition-colors border-l-4 border-indigo-500">
             <div>

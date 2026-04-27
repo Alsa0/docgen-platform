@@ -20,7 +20,7 @@ COMPANY_NAME: str = os.getenv("COMPANY_NAME", "Ma Société")
 COMPANY_LOGO_PATH: str = os.getenv("COMPANY_LOGO_PATH", "assets/logo.png")
 
 # --- Modèle Gemini ---
-GEMINI_MODEL: str = "gemini-1.5-flash"
+GEMINI_MODEL: str = "gemini-2.5-pro"
 
 # --- Répertoire de sortie ---
 OUTPUT_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")

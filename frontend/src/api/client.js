@@ -14,7 +14,7 @@ export const getTemplates = async () => {
   return response.data;
 };
 
-export const generateDocument = async (docType, config, useAi = true, bomItems = [], includeBom = false, includeSow = false) => {
+export const generateDocument = async (docType, config, useAi = true, bomItems = [], includeBom = false, includeSow = false, exportFormat = "docx") => {
   const response = await apiClient.post(
     '/api/documents/generate',
     {
@@ -24,6 +24,7 @@ export const generateDocument = async (docType, config, useAi = true, bomItems =
       include_bom: includeBom,
       include_sow: includeSow,
       bom_items: bomItems,
+      export_format: exportFormat,
     },
     { responseType: 'blob' }
   );

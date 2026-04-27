@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from config.settings import TEMPLATES_DIR
-from services import ai_service, doc_generator
+from services import ai_service, doc_generator, excel_generator
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -23,6 +23,7 @@ class GenerateRequest(BaseModel):
     include_bom: bool = False
     include_sow: bool = False
     bom_items: list[dict] = []
+    export_format: str = "docx"  # docx or xlsx
 
 
 class PreviewRequest(BaseModel):
@@ -73,7 +74,11 @@ async def generate_document(request: GenerateRequest):
                     project_type=config.get("type_projet", ""),
                     specific_equipment=config.get("equipements_libres", ""),
                 )
-            filepath = doc_generator.generate_bom_docx(config, bom_items)
+            
+            if request.export_format == "xlsx":
+                filepath = excel_generator.generate_excel_bom(config, bom_items)
+            else:
+                filepath = doc_generator.generate_bom_docx(config, bom_items)
 
         # --- SOW ---
         elif doc_type == "sow":
@@ -86,14 +91,16 @@ async def generate_document(request: GenerateRequest):
                         currency=config.get("devise", "MGA"),
                         project_type=config.get("type_projet", ""),
                     )
-                sow_content = await ai_service.generate_sow_content(
-                    project_description=config.get("projet_description", ""),
                     config=config,
                     bom_items=bom_items if request.include_bom else None,
                 )
-            filepath = doc_generator.generate_sow_docx(
-                config, sow_content, bom_items if request.include_bom else None
-            )
+            
+            if request.export_format == "xlsx":
+                filepath = excel_generator.generate_excel_sow(config, sow_content, bom_items if request.include_bom else None)
+            else:
+                filepath = doc_generator.generate_sow_docx(
+                    config, sow_content, bom_items if request.include_bom else None
+                )
 
         # --- OT ---
         elif doc_type == "ot":
@@ -154,10 +161,14 @@ async def generate_document(request: GenerateRequest):
 
         # Retourner le fichier
         filename = os.path.basename(filepath)
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        if filepath.endswith(".xlsx"):
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            
         return FileResponse(
             path=filepath,
             filename=filename,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            media_type=media_type,
         )
 
     except HTTPException:
