@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 genai.configure(api_key=GEMINI_API_KEY)
 
 
+def _get_model(use_search: bool = False):
+    """
+    Retourne un modèle Gemini.
+    IMPORTANT : google_search_retrieval n'est PAS supporté sur le plan gratuit.
+    On utilise donc toujours le modèle sans tools pour éviter les erreurs 429/400.
+    """
+    return genai.GenerativeModel(model_name=GEMINI_MODEL)
+
+
 async def generate_bom_content(
     project_description: str,
     budget: float,
@@ -19,10 +28,7 @@ async def generate_bom_content(
     project_type: str = "infrastructure réseau",
     specific_equipment: str = ""
 ) -> list[dict]:
-    """
-    Génère une liste d'équipements BOM en utilisant Gemini.
-    Retourne une liste JSON structurée.
-    """
+    """Génère une liste d'équipements BOM en utilisant Gemini."""
     try:
         prompt = f"""Tu es un expert en ingénierie IT et télécom à Madagascar. 
 Génère un Bill of Materials (BOM) détaillé pour ce projet.
@@ -33,12 +39,13 @@ Génère un Bill of Materials (BOM) détaillé pour ce projet.
 {f"**Équipements souhaités** : {specific_equipment}" if specific_equipment else ""}
 
 INSTRUCTIONS :
-1. Recherche les équipements réels avec leurs prix actuels
-2. Privilégie les fournisseurs accessibles depuis Madagascar
+1. Propose des équipements réels adaptés au projet
+2. Privilégie les marques connues (Cisco, Ubiquiti, Dell, HP, Fortinet, etc.)
 3. Reste dans le budget indiqué
-4. Inclus tous les accessoires nécessaires (câbles, connecteurs, licences, etc.)
+4. Inclus les accessoires nécessaires (câbles, connecteurs, licences, etc.)
 
-Retourne UNIQUEMENT un tableau JSON valide contenant des objets avec cette structure :
+Retourne UNIQUEMENT un tableau JSON valide (sans texte avant ou après) :
+[
   {{
     "reference": "REF-001",
     "designation": "Nom complet de l'équipement",
@@ -48,21 +55,18 @@ Retourne UNIQUEMENT un tableau JSON valide contenant des objets avec cette struc
     "prix_unitaire": 0,
     "devise": "{currency}",
     "fournisseur": "Nom du fournisseur",
-    "url": "https://...",
+    "url": "",
     "description": "Description courte et technique"
   }}
+]
 
 Génère entre 5 et 15 lignes d'équipements selon le projet."""
 
-        model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            tools='google_search_retrieval'
-        )
+        model = _get_model()
         response = await model.generate_content_async(prompt)
-        
+
         bom_items = _extract_json_from_response(response.text)
         if isinstance(bom_items, list):
-            # Calculer les prix totaux
             for i, item in enumerate(bom_items):
                 item["reference"] = item.get("reference", f"REF-{i+1:03d}")
                 item["prix_total"] = item.get("quantite", 1) * item.get("prix_unitaire", 0)
@@ -81,9 +85,7 @@ async def generate_sow_content(
     config: dict,
     bom_items: list[dict] | None = None
 ) -> dict:
-    """
-    Génère le contenu d'un Scope of Work structuré avec Gemini.
-    """
+    """Génère le contenu d'un Scope of Work structuré avec Gemini."""
     try:
         bom_section = ""
         if bom_items:
@@ -106,7 +108,7 @@ async def generate_sow_content(
 **Critères d'acceptation** : {', '.join(config.get('criteres_acceptation', ['À définir']))}
 {bom_section}
 
-Retourne UNIQUEMENT un objet JSON valide avec cette structure exacte :
+Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
 {{
   "overview": "Résumé exécutif du projet...",
   "objectifs": ["Objectif 1", "Objectif 2"],
@@ -138,12 +140,10 @@ Retourne UNIQUEMENT un objet JSON valide avec cette structure exacte :
 
 Génère entre 5 et 10 tâches détaillées et réalistes."""
 
-        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
-        response = await model.generate_content_async(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        
+        # CORRECTION : pas de response_mime_type car non supporté sur tous les modèles gratuits
+        model = _get_model()
+        response = await model.generate_content_async(prompt)
+
         sow_content = _extract_json_from_response(response.text)
         if isinstance(sow_content, dict):
             return sow_content
@@ -161,13 +161,11 @@ async def generate_ot_content(
     sow_summary: dict | None = None,
     bom_summary: list[dict] | None = None
 ) -> dict:
-    """
-    Génère le contenu d'une Offre Technique complète.
-    """
+    """Génère le contenu d'une Offre Technique complète."""
     try:
         annexes = ""
         if sow_summary:
-            annexes += f"\n**Résumé SOW disponible** : {json.dumps(sow_summary, ensure_ascii=False)[:1000]}"
+            annexes += f"\n**Résumé SOW disponible** : {json.dumps(sow_summary, ensure_ascii=False)[:500]}"
         if bom_summary:
             total_bom = sum(item.get("prix_total", 0) for item in bom_summary)
             annexes += f"\n**Résumé BOM** : {len(bom_summary)} équipements, total : {total_bom:,.0f} {config.get('devise', 'MGA')}"
@@ -185,7 +183,7 @@ Génère une Offre Technique professionnelle et persuasive en français.
 **Équipe** : {', '.join(config.get('equipe', ['À définir']))}
 {annexes}
 
-Retourne UNIQUEMENT un JSON valide :
+Retourne UNIQUEMENT un JSON valide (sans texte avant ou après) :
 {{
   "presentation_entreprise": "Paragraphe de présentation de {COMPANY_NAME}...",
   "comprehension_besoin": "Analyse du besoin client...",
@@ -207,11 +205,8 @@ Retourne UNIQUEMENT un JSON valide :
   "conditions_paiement": "{config.get('conditions_paiement', '30/40/30')}"
 }}"""
 
-        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
-        response = await model.generate_content_async(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
+        model = _get_model()
+        response = await model.generate_content_async(prompt)
 
         ot_content = _extract_json_from_response(response.text)
         if isinstance(ot_content, dict):
@@ -225,9 +220,7 @@ Retourne UNIQUEMENT un JSON valide :
 
 
 async def generate_ir_content(config: dict) -> dict:
-    """
-    Génère le contenu d'un Rapport d'Intervention.
-    """
+    """Génère le contenu d'un Rapport d'Intervention."""
     try:
         prompt = f"""Tu es un ingénieur terrain senior en IT/Télécom.
 Génère un rapport d'intervention technique professionnel en français.
@@ -245,7 +238,7 @@ Génère un rapport d'intervention technique professionnel en français.
 **Solutions** : {config.get('solutions_appliquees', 'N/A')}
 **Statut** : {config.get('statut', 'terminé')}
 
-Retourne UNIQUEMENT un JSON valide :
+Retourne UNIQUEMENT un JSON valide (sans texte avant ou après) :
 {{
   "resume_intervention": "Résumé concis de l'intervention...",
   "travaux_details": [
@@ -258,10 +251,7 @@ Retourne UNIQUEMENT un JSON valide :
   ],
   "analyse_problemes": "Analyse technique des problèmes rencontrés...",
   "solutions_detaillees": "Détail des solutions mises en place...",
-  "recommandations": [
-    "Recommandation technique 1",
-    "Recommandation technique 2"
-  ],
+  "recommandations": ["Recommandation technique 1", "Recommandation technique 2"],
   "actions_requises": [
     {{
       "action": "Description de l'action",
@@ -273,11 +263,8 @@ Retourne UNIQUEMENT un JSON valide :
   "conclusion": "Conclusion générale de l'intervention..."
 }}"""
 
-        model = genai.GenerativeModel(model_name=GEMINI_MODEL)
-        response = await model.generate_content_async(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
+        model = _get_model()
+        response = await model.generate_content_async(prompt)
 
         ir_content = _extract_json_from_response(response.text)
         if isinstance(ir_content, dict):
@@ -294,9 +281,7 @@ async def generate_lld_content(
     config: dict,
     bom_items: list[dict] | None = None
 ) -> dict:
-    """
-    Génère le contenu d'un Low Level Design Document avec Google Search Grounding.
-    """
+    """Génère le contenu d'un Low Level Design Document."""
     try:
         equipements_str = "\n".join(config.get("equipements_principaux", []))
         vlans_str = "\n".join(config.get("vlan_list", []))
@@ -330,11 +315,7 @@ Génère un document Low Level Design (LLD) technique détaillé en français.
 **Exigences performance** : {config.get('exigences_performance', 'Standards')}
 **Contraintes** : {config.get('contraintes', 'Aucune')}
 
-INSTRUCTIONS :
-1. Propose un plan d'adressage IP complet et cohérent
-2. Détaille les configurations par équipement
-
-Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
+Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
 {{
   "contexte_objectifs": "Description du contexte et des objectifs...",
   "architecture_generale": "Description de l'architecture...",
@@ -344,8 +325,8 @@ Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
       "marque_modele": "Marque Modèle",
       "role": "Rôle",
       "specs_techniques": "Spécifications clés",
-      "datasheet_url": "URL",
-      "configuration_principale": "Configuration"
+      "datasheet_url": "",
+      "configuration_principale": "Configuration recommandée"
     }}
   ],
   "plan_adressage": [
@@ -358,7 +339,7 @@ Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
       "usage": "Usage"
     }}
   ],
-  "schema_interconnexion": "Description des interconnexions...",
+  "schema_interconnexion": "Description détaillée des interconnexions...",
   "configurations_detaillees": [
     {{
       "equipement": "Nom",
@@ -370,22 +351,20 @@ Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
       "etape": 1,
       "titre": "Titre",
       "description": "Description",
-      "validation": "Test"
+      "validation": "Test de validation"
     }}
   ],
   "references_datasheets": [
     {{
       "equipement": "Nom",
-      "url": "URL",
+      "url": "",
       "source": "Source"
     }}
   ]
 }}"""
 
-        model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            tools='google_search_retrieval'
-        )
+        # CORRECTION : suppression de tools='google_search_retrieval' non supporté en gratuit
+        model = _get_model()
         response = await model.generate_content_async(prompt)
 
         lld_content = _extract_json_from_response(response.text)
@@ -402,57 +381,69 @@ Retourne UNIQUEMENT un objet JSON valide contenant cette structure :
 async def analyze_rfp_email(email_content: str) -> dict:
     """
     Analyse un email de demande (RFP) et génère des propositions de BOM.
+    CORRECTION : suppression de tools='google_search_retrieval' non supporté en gratuit.
     """
     try:
-        prompt = f"""Tu es un expert en ingénierie IT et avant-vente. 
-Analyse cet email de demande de proposition (RFP) et génère 3 propositions techniques différentes (ex: Économique, Standard, Premium).
+        prompt = f"""Tu es un expert en ingénierie IT et avant-vente à Madagascar.
+Analyse cet email de demande de proposition et génère 3 propositions techniques.
 
 **Contenu de l'Email** :
 {email_content}
 
 INSTRUCTIONS :
-1. Extrais les informations clés du projet (titre, client, budget estimé, type de projet).
-2. Pour chaque proposition (3 au total) :
-   - Donne-lui un titre (ex: "Solution Cisco Haute Performance")
-   - Donne une justification courte
-   - Génère une liste d'équipements (BOM) réelle avec prix du marché (utilise la recherche web)
-   - Calcule le total pour cette proposition
+1. Extrais les informations clés du projet (titre, client, budget estimé, type de projet)
+2. Génère 3 propositions : Économique, Standard, Premium
+3. Pour chaque proposition : liste d'équipements avec marques connues et prix estimés en MGA
+4. Calcule le total de chaque proposition
 
-Retourne UNIQUEMENT un objet JSON valide avec cette structure :
+Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
 {{
   "project_info": {{
-    "title": "Titre suggéré",
+    "title": "Titre suggéré du projet",
     "client": "Nom du client identifié",
     "type": "Type de projet",
-    "description": "Résumé du besoin"
+    "description": "Résumé du besoin en 2-3 phrases"
   }},
   "proposals": [
     {{
       "id": 1,
-      "label": "Nom de la proposition",
-      "summary": "Pourquoi cette solution ?",
-      "total_estimated": 0,
+      "label": "Solution Économique",
+      "summary": "Justification courte de cette solution",
+      "total_estimated": 15000000,
       "currency": "MGA",
       "bom_items": [
         {{
-          "designation": "Equipement",
+          "designation": "Nom complet de l'équipement",
           "marque": "Marque",
-          "modele": "Modele",
+          "modele": "Modèle",
           "quantite": 1,
-          "prix_unitaire": 0,
-          "description": "..."
+          "prix_unitaire": 500000,
+          "description": "Description technique courte"
         }}
       ]
+    }},
+    {{
+      "id": 2,
+      "label": "Solution Standard",
+      "summary": "Justification courte",
+      "total_estimated": 25000000,
+      "currency": "MGA",
+      "bom_items": []
+    }},
+    {{
+      "id": 3,
+      "label": "Solution Premium",
+      "summary": "Justification courte",
+      "total_estimated": 45000000,
+      "currency": "MGA",
+      "bom_items": []
     }}
   ]
 }}"""
 
-        model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL,
-            tools='google_search_retrieval'
-        )
+        model = _get_model()
         response = await model.generate_content_async(prompt)
-        
+
         analysis = _extract_json_from_response(response.text)
         if isinstance(analysis, dict):
             return analysis
@@ -466,15 +457,17 @@ Retourne UNIQUEMENT un objet JSON valide avec cette structure :
 
 
 def _extract_json_from_response(text: str) -> dict | list | None:
-    """Extrait un objet JSON depuis une réponse textuelle."""
+    """Extrait un objet JSON depuis une réponse textuelle de Gemini."""
     if not text:
         return None
-        
+
+    # Essai direct
     try:
         return json.loads(text.strip())
     except json.JSONDecodeError:
         pass
 
+    # Chercher dans un bloc ```json ... ```
     import re
     json_block = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?```', text)
     if json_block:
@@ -483,6 +476,7 @@ def _extract_json_from_response(text: str) -> dict | list | None:
         except json.JSONDecodeError:
             pass
 
+    # Chercher le premier [ ... ] ou { ... } complet
     for start_char, end_char in [('[', ']'), ('{', '}')]:
         start_idx = text.find(start_char)
         if start_idx == -1:

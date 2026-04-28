@@ -20,7 +20,7 @@ COMPANY_NAME: str = os.getenv("COMPANY_NAME", "Ma Société")
 COMPANY_LOGO_PATH: str = os.getenv("COMPANY_LOGO_PATH", "assets/logo.png")
 
 # --- Modèle Gemini ---
-GEMINI_MODEL: str = "gemini-2.5-pro"
+GEMINI_MODEL: str = "gemini-2.5-flash"
 
 # --- Répertoire de sortie ---
 OUTPUT_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
@@ -33,12 +33,9 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 def validate_config() -> dict:
-    """Valide que toutes les variables critiques sont configurées."""
     errors = []
-    if not GEMINI_API_KEY or GEMINI_API_KEY.startswith("AIzaSyA4CbFunAaZACDmW-2dO0AI4kq2ViYAH98"):
+    if not GEMINI_API_KEY:
         errors.append("GEMINI_API_KEY non configurée")
-    if not TAVILY_API_KEY or TAVILY_API_KEY.startswith("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"):
-        errors.append("TAVILY_API_KEY non configurée")
     return {
         "valid": len(errors) == 0,
         "errors": errors,
