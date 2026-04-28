@@ -9,6 +9,7 @@ load_dotenv()
 
 # --- Clés API ---
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 
 # --- Configuration de l'application ---

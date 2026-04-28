@@ -1,6 +1,3 @@
-# Service d'intégration avec l'API Google Gemini
-# Gère toutes les interactions IA pour la génération de contenu documentaire
-
 import json
 import logging
 import google.generativeai as genai
@@ -13,11 +10,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 
 def _get_model(use_search: bool = False):
-    """
-    Retourne un modèle Gemini.
-    IMPORTANT : google_search_retrieval n'est PAS supporté sur le plan gratuit.
-    On utilise donc toujours le modèle sans tools pour éviter les erreurs 429/400.
-    """
+    """Retourne un modèle Gemini."""
     return genai.GenerativeModel(model_name=GEMINI_MODEL)
 
 
@@ -140,7 +133,6 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
 
 Génère entre 5 et 10 tâches détaillées et réalistes."""
 
-        # CORRECTION : pas de response_mime_type car non supporté sur tous les modèles gratuits
         model = _get_model()
         response = await model.generate_content_async(prompt)
 
@@ -363,7 +355,6 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
   ]
 }}"""
 
-        # CORRECTION : suppression de tools='google_search_retrieval' non supporté en gratuit
         model = _get_model()
         response = await model.generate_content_async(prompt)
 
@@ -379,10 +370,7 @@ Retourne UNIQUEMENT un objet JSON valide (sans texte avant ou après) :
 
 
 async def analyze_rfp_email(email_content: str) -> dict:
-    """
-    Analyse un email de demande (RFP) et génère des propositions de BOM.
-    CORRECTION : suppression de tools='google_search_retrieval' non supporté en gratuit.
-    """
+    """Analyse un email RFP et génère des propositions de BOM."""
     try:
         prompt = f"""Tu es un expert en ingénierie IT et avant-vente à Madagascar.
 Analyse cet email de demande de proposition et génère 3 propositions techniques.

@@ -30,7 +30,7 @@ const UnifiedGenerator = () => {
           reference: item.reference || `REF-${(idx + 1).toString().padStart(3, '0')}`,
           prix_total: (item.quantite || 1) * (item.prix_unitaire || 0)
         })));
-        
+
         setConfig(prev => ({
           ...prev,
           projet_titre: analysis.project_info.title || prev.projet_titre,
@@ -62,17 +62,30 @@ const UnifiedGenerator = () => {
   const handleGenerate = async (type) => {
     setIsGenerating(prev => ({ ...prev, [type]: true }));
     try {
+      // Préparer la config complète avec les infos du projet
+      const fullConfig = {
+        ...config,
+        projet_description: config.projet_description ||
+          analysis?.project_info?.description || '',
+        type_projet: config.type_projet ||
+          analysis?.project_info?.type || 'infrastructure réseau',
+      };
+
+      // Force XLSX for BOM, use selected format for SOW
+      const finalFormat = type === 'bom' ? 'xlsx' : exportFormat;
+
       await apiClient.generateDocument(
-        type, 
-        config, 
-        true, 
-        items, 
-        type === 'sow', // include_bom for SOW
-        false,
-        exportFormat
+        type,
+        fullConfig,
+        true,          // use_ai
+        items,         // bom_items
+        type === 'sow', // include_bom
+        false,         // include_sow
+        finalFormat
       );
     } catch (error) {
       console.error(`${type} generation failed`, error);
+      alert(`Erreur lors de la génération du ${type.toUpperCase()}. Vérifiez le terminal backend.`);
     } finally {
       setIsGenerating(prev => ({ ...prev, [type]: false }));
     }
@@ -106,14 +119,14 @@ const UnifiedGenerator = () => {
           </div>
           <div className="p-6">
             <p className="text-sm text-gray-400 mb-4">Collez l'email reçu du client pour que l'IA identifie les équipements et les tâches nécessaires.</p>
-            <textarea 
+            <textarea
               className="input w-full min-h-[150px] mb-4 bg-black/20 border-white/10 focus:border-indigo-500 transition-all"
               placeholder="Cher partenaire, nous souhaitons..."
               value={emailContent}
               onChange={(e) => setEmailContent(e.target.value)}
             />
             <div className="flex justify-end">
-              <button 
+              <button
                 className="btn btn-primary px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/30"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !emailContent.trim()}
@@ -134,14 +147,13 @@ const UnifiedGenerator = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {analysis.proposals.map((proposal) => (
-                <div 
-                  key={proposal.id} 
+                <div
+                  key={proposal.id}
                   onClick={() => setSelectedProposalId(proposal.id)}
-                  className={`glass-card p-6 cursor-pointer border-2 transition-all duration-300 relative ${
-                    selectedProposalId === proposal.id 
-                    ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02]' 
-                    : 'border-transparent hover:border-white/20'
-                  }`}
+                  className={`glass-card p-6 cursor-pointer border-2 transition-all duration-300 relative ${selectedProposalId === proposal.id
+                      ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02]'
+                      : 'border-transparent hover:border-white/20'
+                    }`}
                 >
                   {selectedProposalId === proposal.id && (
                     <div className="absolute top-4 right-4 text-indigo-500">
@@ -173,18 +185,18 @@ const UnifiedGenerator = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-gray-500 uppercase ml-1">Titre du Projet</label>
-                <input 
-                  className="input" 
-                  value={config.projet_titre} 
-                  onChange={e => setConfig({...config, projet_titre: e.target.value})}
+                <input
+                  className="input"
+                  value={config.projet_titre}
+                  onChange={e => setConfig({ ...config, projet_titre: e.target.value })}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-gray-500 uppercase ml-1">Client</label>
-                <input 
-                  className="input" 
-                  value={config.client_nom} 
-                  onChange={e => setConfig({...config, client_nom: e.target.value})}
+                <input
+                  className="input"
+                  value={config.client_nom}
+                  onChange={e => setConfig({ ...config, client_nom: e.target.value })}
                 />
               </div>
             </div>
@@ -193,58 +205,58 @@ const UnifiedGenerator = () => {
           </div>
         </section>
 
-        {/* Section 4: Format Selection */}
-        {items.length > 0 && (
-          <div className="flex justify-center gap-4 mb-2 animate-fade-in">
-            <button 
-              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${exportFormat === 'docx' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-              onClick={() => setExportFormat('docx')}
-            >
-              Format Word (.docx)
-            </button>
-            <button 
-              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${exportFormat === 'xlsx' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-              onClick={() => setExportFormat('xlsx')}
-            >
-              Format Excel (.xlsx)
-            </button>
-          </div>
-        )}
-
-        {/* Section 5: Generation Footer */}
+        {/* Section 4: Generation Footer */}
         <div className={`flex flex-col md:flex-row gap-6 ${!items.length && 'opacity-50 pointer-events-none'}`}>
           <div className="flex-1 glass-card p-6 flex items-center justify-between hover:bg-indigo-500/5 transition-colors border-l-4 border-indigo-500">
             <div>
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Layers size={18} className="text-indigo-400" /> Bill of Materials
               </h3>
-              <p className="text-sm text-gray-500">Liste détaillée des équipements et coûts</p>
+              <p className="text-sm text-gray-500">Génération directe en Excel (.xlsx)</p>
             </div>
-            <button 
-              className="btn btn-primary"
+            <button
+              className="btn btn-primary px-6"
               onClick={() => handleGenerate('bom')}
               disabled={isGenerating.bom}
             >
               {isGenerating.bom ? <div className="spinner w-5 h-5 mr-2"></div> : <Download size={18} className="mr-2" />}
-              Générer BOM
+              Générer Excel
             </button>
           </div>
 
-          <div className="flex-1 glass-card p-6 flex items-center justify-between hover:bg-emerald-500/5 transition-colors border-l-4 border-emerald-500">
-            <div>
-              <h3 className="font-bold text-white flex items-center gap-2">
-                <FileText size={18} className="text-emerald-400" /> Scope of Work
-              </h3>
-              <p className="text-sm text-gray-500">Détails des tâches et responsabilités</p>
+          <div className="flex-1 glass-card p-6 flex flex-col gap-4 hover:bg-emerald-500/5 transition-colors border-l-4 border-emerald-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <FileText size={18} className="text-emerald-400" /> Scope of Work
+                </h3>
+                <p className="text-sm text-gray-500">Détails des tâches et responsabilités</p>
+              </div>
+              <button
+                className="btn bg-emerald-600 hover:bg-emerald-500 text-white flex items-center px-6 py-2 rounded-xl transition-all"
+                onClick={() => handleGenerate('sow')}
+                disabled={isGenerating.sow}
+              >
+                {isGenerating.sow ? <div className="spinner w-5 h-5 mr-2"></div> : <Download size={18} className="mr-2" />}
+                Générer SOW
+              </button>
             </div>
-            <button 
-              className="btn bg-emerald-600 hover:bg-emerald-500 text-white flex items-center px-6 py-2 rounded-xl transition-all"
-              onClick={() => handleGenerate('sow')}
-              disabled={isGenerating.sow}
-            >
-              {isGenerating.sow ? <div className="spinner w-5 h-5 mr-2"></div> : <Download size={18} className="mr-2" />}
-              Générer SOW
-            </button>
+            
+            {/* SOW Format Toggle */}
+            <div className="flex gap-2 p-1 bg-black/20 rounded-lg self-end">
+              <button 
+                className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'docx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                onClick={() => setExportFormat('docx')}
+              >
+                Word
+              </button>
+              <button 
+                className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'xlsx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                onClick={() => setExportFormat('xlsx')}
+              >
+                Excel
+              </button>
+            </div>
           </div>
         </div>
 
