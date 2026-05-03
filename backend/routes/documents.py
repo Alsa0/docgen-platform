@@ -14,12 +14,17 @@ from services import ai_service, doc_generator, excel_generator
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Cache simple pour stocker les contenus générés en arrière-plan
+# Clé : "projet_titre|client_nom", Valeur : sow_content (dict)
+sow_cache = {}
+
 
 class GenerateRequest(BaseModel):
     """Requête de génération de document."""
     doc_type: str  # bom, sow, ot, ir, lld
     config: dict
     use_ai: bool = True
+    use_search: bool = True
     include_bom: bool = False
     include_sow: bool = False
     bom_items: list[dict] = []
@@ -96,6 +101,14 @@ async def generate_document(request: GenerateRequest):
                     config=config,
                     bom_items=bom_items if request.include_bom else None,
                 )
+            
+            # Mettre en cache pour l'OT
+            cache_key = f"{config.get('projet_titre', '')}|{config.get('client_nom', '')}"
+            if cache_key != "|":
+                sow_cache[cache_key] = sow_content
+
+            if request.export_format == "none":
+                return {"status": "success", "content": sow_content}
 
             if request.export_format == "xlsx":
                 filepath = excel_generator.generate_excel_sow(
@@ -112,10 +125,16 @@ async def generate_document(request: GenerateRequest):
             bom_summary = None
             if request.use_ai:
                 if request.include_sow:
-                    sow_summary = await ai_service.generate_sow_content(
-                        project_description=config.get("projet_description", ""),
-                        config=config,
-                    )
+                    # Vérifier le cache d'abord
+                    cache_key = f"{config.get('projet_titre', '')}|{config.get('client_nom', '')}"
+                    if cache_key in sow_cache:
+                        logger.info(f"Utilisation du SOW en cache pour {cache_key}")
+                        sow_summary = sow_cache[cache_key]
+                    else:
+                        sow_summary = await ai_service.generate_sow_content(
+                            project_description=config.get("projet_description", ""),
+                            config=config,
+                        )
                 if request.include_bom and not bom_items:
                     bom_items = await ai_service.generate_bom_content(
                         project_description=config.get("projet_description", ""),
@@ -128,6 +147,7 @@ async def generate_document(request: GenerateRequest):
                     config=config,
                     sow_summary=sow_summary,
                     bom_summary=bom_summary,
+                    use_search=request.use_search
                 )
             else:
                 ot_content = {}

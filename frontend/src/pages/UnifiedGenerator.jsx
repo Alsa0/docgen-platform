@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Search, Layers, FileText, Download, CheckCircle2, ChevronRight, Info, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, Search, Layers, FileText, Download, CheckCircle2, ChevronRight, Info, AlertCircle, Briefcase } from 'lucide-react';
 import apiClient from '../api/client';
 import EquipmentTable from '../components/EquipmentTable';
 
 const UnifiedGenerator = () => {
+  const navigate = useNavigate();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
@@ -60,6 +62,42 @@ const UnifiedGenerator = () => {
   };
 
   const handleGenerate = async (type) => {
+    // Validation : si c'est un BOM et qu'il n'y a pas d'items, on affiche une erreur explicite
+    if (type === 'bom' && (!items || items.length === 0)) {
+      alert("Veuillez d'abord analyser votre demande avec l'IA pour générer le contenu du BOM, ou ajoutez des éléments manuellement dans le tableau.");
+      return;
+    }
+
+    if (type === 'ot') {
+      setIsGenerating(prev => ({ ...prev, sow: true }));
+      try {
+        const fullConfig = {
+          ...config,
+          projet_description: config.projet_description || analysis?.project_info?.description || '',
+          type_projet: config.type_projet || analysis?.project_info?.type || 'infrastructure réseau',
+        };
+
+        // Lancer la génération du SOW en arrière-plan sans attendre la fin du téléchargement
+        apiClient.generateDocument(
+          'sow',
+          fullConfig,
+          true,          // use_ai
+          items,         // bom_items
+          true,          // include_bom
+          false,         // include_sow
+          'none'         // export_format: none for background
+        ).catch(err => console.error("Background SOW generation failed", err));
+
+        // Rediriger vers la page OT
+        navigate('/generate/ot', { state: { config: fullConfig, bom_items: items } });
+      } catch (error) {
+        console.error("Navigation to OT failed", error);
+      } finally {
+        setIsGenerating(prev => ({ ...prev, sow: false }));
+      }
+      return;
+    }
+
     setIsGenerating(prev => ({ ...prev, [type]: true }));
     try {
       // Préparer la config complète avec les infos du projet
@@ -127,7 +165,7 @@ const UnifiedGenerator = () => {
             />
             <div className="flex justify-end">
               <button
-                className="btn btn-primary px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/30"
+                className="btn btn-primary px-8"
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !emailContent.trim()}
               >
@@ -206,55 +244,38 @@ const UnifiedGenerator = () => {
         </section>
 
         {/* Section 4: Generation Footer */}
-        <div className={`flex flex-col md:flex-row gap-6 ${!items.length && 'opacity-50 pointer-events-none'}`}>
+        <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 glass-card p-6 flex items-center justify-between hover:bg-indigo-500/5 transition-colors border-l-4 border-indigo-500">
             <div>
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Layers size={18} className="text-indigo-400" /> Bill of Materials
               </h3>
-              <p className="text-sm text-gray-500">Génération directe en Excel (.xlsx)</p>
             </div>
             <button
-              className="btn btn-primary px-6"
+              className="btn btn-primary btn-action"
               onClick={() => handleGenerate('bom')}
               disabled={isGenerating.bom}
             >
               {isGenerating.bom ? <div className="spinner w-5 h-5 mr-2"></div> : <Download size={18} className="mr-2" />}
-              Générer Excel
+              Générer BOM
             </button>
           </div>
 
-          <div className="flex-1 glass-card p-6 flex flex-col gap-4 hover:bg-emerald-500/5 transition-colors border-l-4 border-emerald-500">
+          <div className="flex-1 glass-card p-6 flex flex-col gap-4 hover:bg-amber-500/5 transition-colors border-l-4 border-amber-500">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-white flex items-center gap-2">
-                  <FileText size={18} className="text-emerald-400" /> Scope of Work
+                  <Briefcase size={18} className="text-amber-400" /> Offre technique
                 </h3>
                 <p className="text-sm text-gray-500">Détails des tâches et responsabilités</p>
               </div>
               <button
-                className="btn bg-emerald-600 hover:bg-emerald-500 text-white flex items-center px-6 py-2 rounded-xl transition-all"
-                onClick={() => handleGenerate('sow')}
+                className="btn btn-primary btn-action"
+                onClick={() => handleGenerate('ot')}
                 disabled={isGenerating.sow}
               >
-                {isGenerating.sow ? <div className="spinner w-5 h-5 mr-2"></div> : <Download size={18} className="mr-2" />}
-                Générer SOW
-              </button>
-            </div>
-            
-            {/* SOW Format Toggle */}
-            <div className="flex gap-2 p-1 bg-black/20 rounded-lg self-end">
-              <button 
-                className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'docx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
-                onClick={() => setExportFormat('docx')}
-              >
-                Word
-              </button>
-              <button 
-                className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'xlsx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
-                onClick={() => setExportFormat('xlsx')}
-              >
-                Excel
+                {isGenerating.sow ? <div className="spinner w-5 h-5 mr-2"></div> : <ChevronRight size={18} className="mr-2" />}
+                Suivant
               </button>
             </div>
           </div>

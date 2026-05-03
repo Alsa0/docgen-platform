@@ -264,80 +264,115 @@ def generate_sow_docx(config: dict, sow_content: dict, bom_items: list = None) -
 
 
 def generate_ot_docx(config: dict, ot_content: dict, sow_summary: dict = None, bom_summary: list = None) -> str:
-    """Génère un document DOCX pour l'Offre Technique."""
+    """Génère un document DOCX pour l'Offre Technique ultra-détaillée selon le nouveau template."""
     try:
-        doc = Document()
-        devise = config.get("devise", "MGA")
-        _add_header(doc, "OFFRE TECHNIQUE", config)
-        _add_footer(doc, config.get("reference_offre", "OT"))
-        _add_title_page(doc, "OFFRE TECHNIQUE", config.get("projet_titre", ""), config)
-
-        # 1. Présentation entreprise
-        _add_section_title(doc, 1, "Notre entreprise")
-        doc.add_paragraph(ot_content.get("presentation_entreprise", ""))
-
-        # 2. Compréhension du besoin
-        _add_section_title(doc, 2, "Compréhension du besoin")
-        doc.add_paragraph(ot_content.get("comprehension_besoin", ""))
-
-        # 3. Solution proposée
-        _add_section_title(doc, 3, "Solution proposée")
-        doc.add_paragraph(ot_content.get("solution_proposee", ""))
-
-        # 4. Méthodologie
-        _add_section_title(doc, 4, "Méthodologie")
-        doc.add_paragraph(ot_content.get("methodologie", ""))
-
-        # 5. Planning
-        _add_section_title(doc, 5, "Planning prévisionnel")
-        planning = ot_content.get("planning", [])
-        if planning:
-            h = ["Phase", "Durée", "Description"]
-            r = [[p.get("phase",""), p.get("duree",""), p.get("description","")] for p in planning]
-            _add_table(doc, h, r)
-
-        # 6. Équipe
-        _add_section_title(doc, 6, "Notre équipe")
-        equipe = ot_content.get("equipe_projet", [])
-        if equipe:
-            for membre in equipe:
-                doc.add_paragraph(f"• {membre.get('nom_role', '')} : {membre.get('responsabilites', '')}")
-
-        # 7. Budget
-        _add_section_title(doc, 7, "Budget global")
-        budget_detail = ot_content.get("budget_detail", [])
-        if budget_detail:
-            h_b = ["Poste", f"Montant ({devise})", "Description"]
-            r_b = [[b.get("poste",""), f"{b.get('montant',0):,.0f}", b.get("description","")] for b in budget_detail]
-            _add_table(doc, h_b, r_b)
-
-        # 8. Conditions
-        _add_section_title(doc, 8, "Conditions et validité")
-        doc.add_paragraph(ot_content.get("conditions_validite", f"Offre valide {config.get('validite_jours', 30)} jours."))
-        doc.add_paragraph(ot_content.get("conditions_paiement", ""))
-
-        # Annexe SOW
-        if sow_summary:
+        template_path = os.path.join(TEMPLATES_DIR, "OT.docx")
+        if os.path.exists(template_path):
+            doc = Document(template_path)
+            logger.info("Utilisation du template OT.docx")
+            
+            # Tentative de remplissage de la page de garde
+            for p in doc.paragraphs:
+                if "Client :" in p.text and config.get("client_nom"):
+                    p.add_run(f" {config['client_nom']}").bold = True
+                if "Titre :" in p.text and config.get("projet_titre"):
+                    p.add_run(f" {config['projet_titre']}").bold = True
+            
             doc.add_page_break()
-            doc.add_heading("ANNEXE A — Résumé du Scope of Work", level=1)
-            doc.add_paragraph(sow_summary.get("overview", ""))
-            for t in sow_summary.get("taches", [])[:5]:
-                doc.add_paragraph(f"• {t.get('titre', '')}: {t.get('description', '')[:100]}...", style="List Bullet")
+        else:
+            doc = Document()
+            _add_header(doc, "OFFRE TECHNIQUE", config)
+            _add_footer(doc, config.get("reference_offre", "OT"))
+            _add_title_page(doc, "OFFRE TECHNIQUE", config.get("projet_titre", ""), config)
 
-        # Annexe BOM
-        if bom_summary:
-            doc.add_page_break()
-            doc.add_heading("ANNEXE B — Résumé du Bill of Materials", level=1)
-            h_bom = ["Désignation", "Qté", f"Prix ({devise})"]
-            r_bom = [[b.get("designation",""), b.get("quantite",1),
-                       f"{b.get('quantite',1)*b.get('prix_unitaire',0):,.0f}"] for b in bom_summary]
-            total = sum(b.get("quantite",1)*b.get("prix_unitaire",0) for b in bom_summary)
-            _add_table(doc, h_bom, r_bom, ["TOTAL", "", f"{total:,.0f}"])
+        # --- Section 1: CONTEXTE ET OBJECTIFS ---
+        s1 = ot_content.get("section1_contexte", {})
+        doc.add_heading("1. CONTEXTE ET OBJECTIFS", level=1)
+        
+        doc.add_heading("1.1 Contexte", level=2)
+        doc.add_paragraph(s1.get("contexte", ""))
+        
+        doc.add_heading("1.2 Objectifs Techniques", level=2)
+        for obj in s1.get("objectifs_techniques", []):
+            doc.add_paragraph(obj, style="List Bullet")
+            
+        doc.add_heading("1.3 Contraintes et Enjeux", level=2)
+        for ce in s1.get("contraintes_enjeux", []):
+            doc.add_paragraph(ce, style="List Bullet")
+            
+        doc.add_heading("1.4 Analyse de l'existant ou besoin", level=2)
+        doc.add_paragraph(s1.get("analyse_besoin", ""))
+        
+        doc.add_heading("1.5 Hypothèse structurante", level=2)
+        for hyp in s1.get("hypotheses", []):
+            doc.add_paragraph(hyp, style="List Bullet")
+            
+        doc.add_heading("1.6 Critères de sélection des solutions", level=2)
+        for crit in s1.get("criteres_selection", []):
+            doc.add_paragraph(crit, style="List Bullet")
+
+        # --- Section 2: SOLUTION PROPOSÉE ---
+        s2 = ot_content.get("section2_solutions", {})
+        doc.add_heading("2. SOLUTION PROPOSÉE", level=1)
+        
+        for i in range(1, 4):
+            sol_key = f"solution{i}"
+            sol = s2.get(sol_key)
+            if sol and sol.get("titre") and sol.get("titre") != "...":
+                doc.add_heading(f"2.{i} {sol.get('titre')}", level=2)
+                
+                doc.add_heading("Présentation de la solution", level=3)
+                doc.add_paragraph(sol.get("presentation", ""))
+                
+                doc.add_heading("Architecture proposée", level=3)
+                doc.add_paragraph(sol.get("architecture", ""))
+                
+                doc.add_heading("Fonctionnalités", level=3)
+                for feat in sol.get("fonctionnalites", []):
+                    doc.add_paragraph(feat, style="List Bullet")
+                    
+                doc.add_heading("Avantages et limites", level=3)
+                doc.add_paragraph(sol.get("avantages_limites", ""))
+                
+                doc.add_heading("Licence et support", level=3)
+                doc.add_paragraph(sol.get("licence_support", ""))
+
+        doc.add_heading("2.4 Comparaison et Synthèse", level=2)
+        doc.add_paragraph(s2.get("comparaison_synthese", ""))
+
+        # --- Section 3: FOURNITURE DE PRESTATION ---
+        s3 = ot_content.get("section3_methodologie", {})
+        doc.add_heading("3. FOURNITURE DE PRESTATION", level=1)
+        
+        phases = s3.get("phases", [])
+        for phase in phases:
+            doc.add_heading(phase.get("nom", "Phase"), level=2)
+            doc.add_paragraph(phase.get("description", ""))
+            for tache in phase.get("taches", []):
+                doc.add_paragraph(tache, style="List Bullet")
+
+        doc.add_heading("3.5 Planning prévisionnel", level=2)
+        doc.add_paragraph(s3.get("planning_previsionnel", ""))
+
+        # --- Section 4: PROPOSITION FINANCIÈRE ---
+        s4 = ot_content.get("section4_finances", {})
+        doc.add_heading("4. PROPOSITION FINANCIÈRE", level=1)
+        doc.add_paragraph(s4.get("recapitulatif", ""))
+        
+        if s4.get("total_ht"):
+            devise = s4.get("devise", "MGA")
+            doc.add_paragraph(f"Montant Total HT : {s4.get('total_ht', 0):,.0f} {devise}", style="Heading 2")
+
+        # --- Section 5: ANNEXES ---
+        s5 = ot_content.get("section5_annexes", [])
+        doc.add_heading("5. ANNEXES", level=1)
+        for annexe in s5:
+            doc.add_paragraph(annexe, style="List Bullet")
 
         filename = f"OT_{config.get('client_nom', 'client')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
         filepath = os.path.join(OUTPUT_DIR, filename)
         doc.save(filepath)
-        logger.info(f"OT DOCX généré : {filepath}")
+        logger.info(f"OT DOCX ultra-détaillé généré : {filepath}")
         return filepath
     except Exception as e:
         logger.error(f"Erreur génération OT DOCX : {e}")

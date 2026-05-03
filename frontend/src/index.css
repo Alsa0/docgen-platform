@@ -109,15 +109,16 @@ a:hover {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background: #5c67f2;
   color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 15px rgba(92, 103, 242, 0.4);
+  border-radius: 12px;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  background: #4f58e1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(92, 103, 242, 0.5);
 }
 
 .btn-primary:active {
@@ -143,6 +144,13 @@ a:hover {
 
 .btn-danger:hover {
   background: rgba(239, 68, 68, 0.2);
+}
+
+.btn-action {
+  min-width: 160px;
+  padding-left: 28px;
+  padding-right: 28px;
+  font-weight: 600;
 }
 
 /* Form Elements */

@@ -17,6 +17,7 @@ const GenerateBOM = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [useAi, setUseAi] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportFormat, setExportFormat] = useState('xlsx'); // Default to xlsx for BOM
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -77,7 +78,7 @@ const GenerateBOM = () => {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      await apiClient.generateDocument('bom', config, useAi, items, false, false);
+      await apiClient.generateDocument('bom', config, useAi, items, false, false, exportFormat);
     } catch (error) {
       console.error("Generation failed", error);
       alert("Erreur lors de la génération du document.");
@@ -154,24 +155,41 @@ const GenerateBOM = () => {
               </label>
             </div>
             
-            <button 
-              className="btn btn-primary" 
-              style={{ padding: '12px 24px', fontSize: '1rem' }}
-              onClick={handleGenerate}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
-                  Génération en cours...
-                </>
-              ) : (
-                <>
-                  <Download size={18} />
-                  Générer le Document DOCX
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2 p-1 bg-black/20 rounded-lg">
+                <button 
+                  className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'docx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                  onClick={() => setExportFormat('docx')}
+                >
+                  Word
+                </button>
+                <button 
+                  className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'xlsx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                  onClick={() => setExportFormat('xlsx')}
+                >
+                  Excel
+                </button>
+              </div>
+
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '12px 24px', fontSize: '1rem' }}
+                onClick={handleGenerate}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    Générer {exportFormat === 'xlsx' ? 'Excel (.xlsx)' : 'Word (.docx)'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

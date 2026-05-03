@@ -1,19 +1,30 @@
 import os
 import shutil
+import copy
 from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from config.settings import OUTPUT_DIR, TEMPLATES_DIR
 
 def copy_cell_style(source_cell, target_cell):
-    """Copie le style complet d'une cellule vers une autre."""
-    if source_cell.has_style:
-        target_cell.font = source_cell.font.copy()
-        target_cell.border = source_cell.border.copy()
-        target_cell.fill = source_cell.fill.copy()
-        target_cell.number_format = source_cell.number_format
-        target_cell.protection = source_cell.protection.copy()
-        target_cell.alignment = source_cell.alignment.copy()
+    """Copie le style complet d'une cellule vers une autre en gérant les MergedCells."""
+    if not source_cell.has_style:
+        return
+    
+    # On cherche la cellule cible réelle si c'est une MergedCell
+    actual_target = target_cell
+    if target_cell.__class__.__name__ == 'MergedCell':
+        # On ne peut pas appliquer de style individuel à une MergedCell secondaire
+        # Le style doit être appliqué à la Master Cell. 
+        # Mais ici, on suppose que target_cell est déjà géré ou on l'ignore.
+        return
+
+    actual_target.font = copy.copy(source_cell.font)
+    actual_target.border = copy.copy(source_cell.border)
+    actual_target.fill = copy.copy(source_cell.fill)
+    actual_target.number_format = source_cell.number_format
+    actual_target.protection = copy.copy(source_cell.protection)
+    actual_target.alignment = copy.copy(source_cell.alignment)
 
 def apply_magenta_style(cell, bold=False, align='center', font_size=10):
     """Applique le style magenta (bordures et police) aux cellules."""
@@ -24,19 +35,38 @@ def apply_magenta_style(cell, bold=False, align='center', font_size=10):
     magenta_side = Side(style='thin', color=magenta)
     cell.border = Border(left=magenta_side, right=magenta_side, top=magenta_side, bottom=magenta_side)
 
-def safe_write(ws, row, col, value):
-    """Écrit une valeur dans une cellule, en gérant les cellules fusionnées."""
+def safe_set(ws, row, col, value=None, font=None, number_format=None, alignment=None, border=None, fill=None):
+    """Définit les propriétés d'une cellule en gérant les fusions (Master vs Merged)."""
     cell = ws.cell(row=row, column=col)
-    if isinstance(cell, openpyxl.cell.cell.MergedCell):
+    target = cell
+    
+    # Si c'est une cellule fusionnée (secondaire), on cherche la cellule maîtresse
+    if cell.__class__.__name__ == 'MergedCell':
+        coord = cell.coordinate
         for merged_range in ws.merged_cells.ranges:
-            if cell.coordinate in merged_range:
-                ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
-                return
-    else:
-        cell.value = value
+            if coord in merged_range:
+                target = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
+                break
+    
+    # On applique les propriétés à la cible (Master cell ou cellule normale)
+    if value is not None:
+        target.value = value
+    if font is not None:
+        target.font = font
+    if number_format is not None:
+        target.number_format = number_format
+    if alignment is not None:
+        target.alignment = alignment
+    if border is not None:
+        target.border = border
+    if fill is not None:
+        target.fill = fill
 
 def generate_excel_bom(config, bom_items):
-    """Remplit le template Excel BOM_1.xlsx avec une mise en page type CIMELTA."""
+    """
+    Remplit le template Excel BOM_1.xlsx.
+    Mapping : Code (B) = Marque/Modèle, Description (D) = Désignation, Unit (H) = "Unit", ...
+    """
     template_path = os.path.join(TEMPLATES_DIR, "BOM_1.xlsx")
     filename = f"BOM_{config.get('client_nom', 'client')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     output_path = os.path.join(OUTPUT_DIR, filename)
@@ -50,105 +80,126 @@ def generate_excel_bom(config, bom_items):
     wb = openpyxl.load_workbook(output_path)
     ws = wb.active
     
-    # 1. Remplissage des infos projet (B2, B3)
-    safe_write(ws, 2, 2, f"Client : {config.get('client_nom', 'N/A').upper()}")
+    # 1. Infos projet
+    client_name = str(config.get('client_nom', 'N/A')).upper()
+    safe_set(ws, 2, 2, value=f"Client : {client_name}")
     
     type_projet = config.get('type_projet', 'Équipements')
     title = f"Équipement {type_projet}" if "équipement" not in type_projet.lower() else type_projet
-    safe_write(ws, 3, 2, title)
-
-    # 2. Gestion des items
-    start_row = 4
-    num_items = len(bom_items)
+    safe_set(ws, 3, 2, value=title)
     
+    # 2. Localisation et Nettoyage
+    start_row = 4
     total_row = None
-    for r in range(start_row, 200):
-        cell_val = ws.cell(row=r, column=6).value
-        val = str(cell_val or "").upper()
-        if "TOTAL" in val:
-            total_row = r
-            break
+    for r in range(start_row, 100):
+        for c in range(1, 12):
+            val = str(ws.cell(row=r, column=c).value or "").upper()
+            if "TOTAL" in val:
+                total_row = r
+                break
+        if total_row: break
     
     if not total_row: total_row = 10
     
-    available_rows = total_row - start_row
+    # --- MÉTHODE RADICALE : Dé-fusionner toute la zone de données ---
+    data_end_search = max(total_row + 50, 100)
+    merged_ranges = list(ws.merged_cells.ranges)
+    for merged_range in merged_ranges:
+        if merged_range.min_row >= start_row and merged_range.max_row <= data_end_search:
+            if merged_range.min_col >= 1 and merged_range.max_col <= 11:
+                try:
+                    ws.unmerge_cells(str(merged_range))
+                except: pass
+
+    style_ref_row = start_row
     
-    if num_items > available_rows:
-        rows_to_add = num_items - available_rows
-        ws.insert_rows(total_row, rows_to_add)
-        for r in range(total_row, total_row + rows_to_add):
-            for c in range(1, 8):
-                copy_cell_style(ws.cell(row=start_row, column=c), ws.cell(row=r, column=c))
-        total_row += rows_to_add
-    # Remplir les items
-    total_general = 0
+    # Vider les colonnes
+    for r in range(start_row, total_row):
+        for c in range(1, 12):
+            ws.cell(row=r, column=c).value = None
+
+    num_samples = total_row - start_row
+    num_items = len(bom_items)
+    
+    if num_items > num_samples:
+        ws.insert_rows(total_row, num_items - num_samples)
+    elif num_items < num_samples:
+        ws.delete_rows(start_row + num_items, num_samples - num_items)
+    
+    new_total_row = start_row + num_items
+
+    # 3. Remplissage des articles
     for i, item in enumerate(bom_items):
         row = start_row + i
-        safe_write(ws, row, 1, f"1.{i+1}")
         
-        # Code : on met la marque et le modèle
-        code_val = f"{item.get('marque', '')} {item.get('modele', '')}".strip()
-        safe_write(ws, row, 2, code_val)
+        ws.cell(row=row, column=1).value = f"1.{i+1}"
+        marque = item.get('marque', '')
+        modele = item.get('modele', '')
+        ws.cell(row=row, column=2).value = f"{marque} {modele}".strip()
         
-        # Description : la désignation ou description technique
         desc_val = item.get('designation', '') or item.get('description', '')
-        safe_write(ws, row, 3, desc_val)
+        ws.cell(row=row, column=4).value = desc_val
         
-        # Unité
-        safe_write(ws, row, 4, "Unit")
+        ws.cell(row=row, column=8).value = "Unit"
+        ws.cell(row=row, column=9).value = item.get('quantite', 1)
+        ws.cell(row=row, column=10).value = item.get('prix_unitaire', 0)
         
-        # Quantité
         qty = item.get('quantite', 1)
-        safe_write(ws, row, 5, qty)
+        u_p = item.get('prix_unitaire', 0)
+        ws.cell(row=row, column=11).value = item.get('prix_total', qty * u_p)
         
-        # Unit Price
-        price = item.get('prix_unitaire', 0)
-        safe_write(ws, row, 6, price)
+        # RE-FUSIONNER
+        try:
+            ws.merge_cells(start_row=row, end_row=row, start_column=2, end_column=3)
+            ws.merge_cells(start_row=row, end_row=row, start_column=4, end_column=7)
+        except: pass
         
-        # Amount (Qty * Price)
-        amount = qty * price
-        total_general += amount
-        safe_write(ws, row, 7, amount)
+        # Styles
+        for c in range(1, 12):
+            copy_cell_style(ws.cell(row=style_ref_row, column=c), ws.cell(row=row, column=c))
 
-    # 3. Mise à jour du Total avec le format Ariary (Ar)
-    # Si on a supprimé/ajouté des lignes, total_row a pu changer
-    # Mais comme on a fait insert_rows avant, total_row est à jour
-    safe_write(ws, total_row, 7, total_general)
-    ws.cell(row=total_row, column=7).number_format = '"Ar" #,##0.00'
+    # 4. Total Global
+    # On recalcule systématiquement à partir des items pour être sûr que ça corresponde au tableau web
+    total_val = sum(item.get('prix_total', 0) for item in bom_items)
     
-    # 4. Nettoyer les lignes inutilisées (Suppression réelle)
-    if num_items < available_rows:
-        # On supprime les lignes vides entre le dernier item et le total
-        rows_to_delete = available_rows - num_items
-        ws.delete_rows(start_row + num_items, rows_to_delete)
-
-    # Nettoyage final du code (suppression des résidus de merge)
+    # Bordure Magenta pour la ligne de total
+    magenta = "B01B6B"
+    side = Side(style='thin', color=magenta)
+    total_border = Border(top=side, bottom=side)
+    
+    # On place le libellé en colonne J (10)
+    safe_set(ws, new_total_row, 10, value="SUB-TOTAL Equipements", 
+             font=Font(bold=True, color=magenta),
+             alignment=Alignment(horizontal='right'),
+             border=total_border)
+    
+    # On place le montant en colonne K (11)
+    safe_set(ws, new_total_row, 11, value=total_val, 
+             font=Font(bold=True), 
+             number_format='"Ar" #,##0.00',
+             border=total_border)
+    
+    # Ajuster la largeur de la colonne K (Amount) pour éviter les #######
+    ws.column_dimensions['K'].width = 18
+    
     wb.save(output_path)
     return output_path
 
 def generate_bom_fallback(config, bom_items, ws, output_path):
     """Ancienne méthode de génération de zéro si le template est manquant."""
-    # Configuration des colonnes
-    ws.column_dimensions['A'].width = 6
-    ws.column_dimensions['B'].width = 30
-    ws.column_dimensions['C'].width = 60
-    ws.column_dimensions['D'].width = 8
-    ws.column_dimensions['E'].width = 8
-    ws.column_dimensions['F'].width = 15
-    ws.column_dimensions['G'].width = 15
-
     headers = ["#", "Code", "Description", "Unit", "Qty", "Unit Price", "Amount"]
+    magenta = "B01B6B"
+    header_font = Font(name='Calibri', size=11, bold=True, color=magenta)
+    
     for col, text in enumerate(headers, 1):
-        apply_magenta_style(ws.cell(row=1, column=col), bold=True, font_size=11)
-        ws.cell(row=1, column=col).value = text
+        safe_set(ws, 1, col, value=text, font=header_font)
 
-    # ... simplified fallback ...
     wb = ws.parent
     wb.save(output_path)
     return output_path
 
 def generate_excel_sow(config, sow_content, bom_items=None):
-    """Génère un fichier Excel SOW avec le style magenta CIMELTA."""
+    """Génère un fichier Excel SOW."""
     template_path = os.path.join(TEMPLATES_DIR, "SOW_1.xlsx")
     filename = f"SOW_{config.get('client_nom', 'client')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     output_path = os.path.join(OUTPUT_DIR, filename)
@@ -162,48 +213,25 @@ def generate_excel_sow(config, sow_content, bom_items=None):
         wb = openpyxl.load_workbook(output_path)
         ws = wb["SoW"] if "SoW" in wb.sheetnames else wb.active
     
-    # Nettoyage des fusions existantes pour le SOW car on redessine un peu les lignes
-    if hasattr(ws, 'merged_cells'):
-        for merge in list(ws.merged_cells.ranges):
-            ws.unmerge_cells(str(merge))
+    safe_set(ws, 10, 4, value=config.get('client_nom', 'N/A'), font=Font(bold=True, color="B01B6B"))
+    safe_set(ws, 12, 4, value=config.get('site_intervention', 'Antananarivo'))
+    safe_set(ws, 13, 4, value=config.get('projet_description', ''))
     
-    ws.column_dimensions['B'].width = 15
-    ws.column_dimensions['C'].width = 20
-    ws.column_dimensions['D'].width = 30
-    ws.column_dimensions['E'].width = 50
-    ws.column_dimensions['I'].width = 10
-
-    ws["D10"] = config.get('client_nom', 'N/A')
-    ws["D10"].font = Font(bold=True, color="B01B6B")
-    ws["D12"] = config.get('site_intervention', 'Antananarivo')
-    ws["D13"] = config.get('projet_description', '')
-    
-    header_row = 19
-    sow_headers = ["", "Phase", "Type", "Titre", "Description", "Site", "Role", "Staff", "Durée (j)"]
-    for col, text in enumerate(sow_headers, 1):
-        if text:
-            apply_magenta_style(ws.cell(row=header_row, column=col), bold=True)
-            ws.cell(row=header_row, column=col).value = text
-
     taches = sow_content.get('taches', [])
     start_row = 20
     
     for i, t in enumerate(taches):
         row = start_row + i
-        if i > 0:
-            ws.insert_rows(row)
-            
-        for col in range(2, 10):
-            apply_magenta_style(ws.cell(row=row, column=col), align='left' if col in [4, 5] else 'center')
-
-        ws.cell(row=row, column=2).value = f"Phase {t.get('phase_num', 1)}"
-        ws.cell(row=row, column=3).value = t.get('type', 'Implémentation')
-        ws.cell(row=row, column=4).value = t.get('titre', '')
-        ws.cell(row=row, column=5).value = t.get('description', '')
-        ws.cell(row=row, column=6).value = config.get('site_intervention', 'Client Site')
-        ws.cell(row=row, column=7).value = "Ing-1"
-        ws.cell(row=row, column=8).value = 1
-        ws.cell(row=row, column=9).value = t.get('duree_jours', 1)
+        if i > 0: ws.insert_rows(row)
+        
+        safe_set(ws, row, 2, value=f"Phase {t.get('phase_num', 1)}")
+        safe_set(ws, row, 3, value=t.get('type', 'Implémentation'))
+        safe_set(ws, row, 4, value=t.get('titre', ''))
+        safe_set(ws, row, 5, value=t.get('description', ''))
+        safe_set(ws, row, 6, value=config.get('site_intervention', 'Client Site'))
+        safe_set(ws, row, 7, value="Ing-1")
+        safe_set(ws, row, 8, value=1)
+        safe_set(ws, row, 9, value=t.get('duree_jours', 1))
 
     wb.save(output_path)
     return output_path

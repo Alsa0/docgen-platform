@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Layers, FileText, Briefcase, Wrench, Network, LayoutTemplate, Mail } from 'lucide-react';
+import { Layers, FileText, Briefcase, Wrench, Network, Mail } from 'lucide-react';
+import logo from '../logo.png';
 
 const Navbar = () => {
   const location = useLocation();
@@ -17,15 +18,18 @@ const Navbar = () => {
       <div className="container flex items-center justify-between" style={{ height: '70px' }}>
         <Link to="/" className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <div style={{ 
-            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
-            padding: '8px', 
+            background: 'white',
+            padding: '4px', 
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+            boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)',
+            width: '40px',
+            height: '40px',
+            overflow: 'hidden'
           }}>
-            <LayoutTemplate size={24} color="white" />
+            <img src={logo} alt="DocGen Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <span style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '0.5px' }}>
             DocGen <span style={{ color: 'var(--accent-tertiary)' }}>Platform</span>

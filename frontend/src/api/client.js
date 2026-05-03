@@ -14,28 +14,34 @@ export const getTemplates = async () => {
   return response.data;
 };
 
-export const generateDocument = async (docType, config, useAi = true, bomItems = [], includeBom = false, includeSow = false, exportFormat = "docx") => {
+export const generateDocument = async (docType, config, useAi = true, bomItems = [], includeBom = false, includeSow = false, exportFormat = "docx", useSearch = true) => {
+  const isBlob = exportFormat !== 'none';
   const response = await apiClient.post(
     '/api/documents/generate',
     {
       doc_type: docType,
       config,
       use_ai: useAi,
+      use_search: useSearch,
       include_bom: includeBom,
       include_sow: includeSow,
       bom_items: bomItems,
       export_format: exportFormat,
     },
-    { responseType: 'blob' }
+    isBlob ? { responseType: 'blob' } : {}
   );
   
+  if (!isBlob) {
+    return response.data;
+  }
+
   // Create a download link for the blob
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
-  
   // Try to extract filename from headers, otherwise use a fallback
-  let fileName = `${docType.toUpperCase()}_Document.docx`;
+  const extension = exportFormat === 'xlsx' ? 'xlsx' : 'docx';
+  let fileName = `${docType.toUpperCase()}_Document.${extension}`;
   const disposition = response.headers['content-disposition'];
   if (disposition && disposition.includes('filename=')) {
     fileName = disposition.split('filename=')[1].replace(/"/g, '');

@@ -10,8 +10,11 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 
 def _get_model(use_search: bool = False):
-    """Retourne un modèle Gemini."""
-    return genai.GenerativeModel(model_name=GEMINI_MODEL)
+    """Retourne un modèle Gemini avec option de recherche web."""
+    tools = None
+    if use_search:
+        tools = [{"google_search_retrieval": {}}]
+    return genai.GenerativeModel(model_name=GEMINI_MODEL, tools=tools)
 
 
 async def generate_bom_content(
@@ -151,60 +154,88 @@ Génère entre 5 et 10 tâches détaillées et réalistes."""
 async def generate_ot_content(
     config: dict,
     sow_summary: dict | None = None,
-    bom_summary: list[dict] | None = None
+    bom_summary: list[dict] | None = None,
+    use_search: bool = True
 ) -> dict:
-    """Génère le contenu d'une Offre Technique complète."""
+    """Génère le contenu d'une Offre Technique ultra-détaillée avec recherche web."""
     try:
-        annexes = ""
+        # Préparation des données contextuelles
+        client = config.get('client_nom', 'Client')
+        projet = config.get('projet_titre', 'Projet')
+        description = config.get('projet_description', '')
+        
+        sow_data = ""
         if sow_summary:
-            annexes += f"\n**Résumé SOW disponible** : {json.dumps(sow_summary, ensure_ascii=False)[:500]}"
+            sow_data = f"\n**INFOS SOW :** {json.dumps(sow_summary, ensure_ascii=False)[:2000]}"
+
+        bom_data = ""
         if bom_summary:
-            total_bom = sum(item.get("prix_total", 0) for item in bom_summary)
-            annexes += f"\n**Résumé BOM** : {len(bom_summary)} équipements, total : {total_bom:,.0f} {config.get('devise', 'MGA')}"
+            bom_data = f"\n**INFOS BOM :** {json.dumps(bom_summary, ensure_ascii=False)[:2000]}"
 
-        prompt = f"""Tu es un directeur commercial d'une société IT ({COMPANY_NAME}) à Madagascar.
-Génère une Offre Technique professionnelle et persuasive en français.
+        prompt = f"""Tu es un expert avant-vente senior pour {COMPANY_NAME} à Madagascar.
+Ta mission est de rédiger une Offre Technique (OT) d'exception pour convaincre le client.
 
-**Client** : {config.get('client_nom', 'Client')}
-**Contact** : {config.get('client_contact', '')}
-**Projet** : {config.get('projet_titre', 'Projet')}
-**Description besoin** : {config.get('projet_description', '')}
-**Type** : {config.get('type_projet', '')}
-**Budget** : {config.get('budget_total', 0):,} {config.get('devise', 'MGA')}
-**Délai** : {config.get('delai_jours', 30)} jours
-**Équipe** : {', '.join(config.get('equipe', ['À définir']))}
-{annexes}
+**PROJET :**
+- Client : {client}
+- Titre : {projet}
+- Description : {description}
 
-Retourne UNIQUEMENT un JSON valide (sans texte avant ou après) :
+{sow_data}
+{bom_data}
+
+**INSTRUCTIONS DE RÉDACTION :**
+1. **RECHERCHE WEB OBLIGATOIRE** : Utilise Google Search pour trouver des détails précis sur les technologies présentes dans le BOM (ex: Proxmox, Cisco, Fortinet, etc.). Recherche leur fonctionnement, architecture type, avantages concurrentiels et derniers modèles.
+2. **STYLE** : Professionnel, persuasif, technique mais accessible. Adapte le ton selon le contexte (sécurité, infrastructure, etc.).
+
+**STRUCTURE JSON ATTENDUE :**
 {{
-  "presentation_entreprise": "Paragraphe de présentation de {COMPANY_NAME}...",
-  "comprehension_besoin": "Analyse du besoin client...",
-  "solution_proposee": "Description de la solution technique...",
-  "methodologie": "Approche méthodologique...",
-  "planning": [
-    {{"phase": "Phase 1 - Préparation", "duree": "5 jours", "description": "..."}}
-  ],
-  "equipe_projet": [
-    {{"nom_role": "Chef de projet", "responsabilites": "..."}}
-  ],
-  "budget_detail": [
-    {{"poste": "Équipements", "montant": 0, "description": "..."}},
-    {{"poste": "Main d'œuvre", "montant": 0, "description": "..."}},
-    {{"poste": "Total", "montant": 0, "description": ""}}
-  ],
-  "valeur_ajoutee": "Nos atouts et différenciateurs...",
-  "conditions_validite": "Cette offre est valide {config.get('validite_jours', 30)} jours...",
-  "conditions_paiement": "{config.get('conditions_paiement', '30/40/30')}"
-}}"""
+  "section1_contexte": {{
+    "contexte": "Description détaillée du contexte client.",
+    "objectifs_techniques": ["Objectif 1", "Objectif 2"],
+    "contraintes_enjeux": ["Contrainte 1", "Enjeu 2"],
+    "analyse_besoin": "Analyse approfondie de la demande.",
+    "hypotheses": ["Hypothèse structurante 1"],
+    "criteres_selection": ["Critère 1 (Performance)", "Critère 2 (Coût)"]
+  }},
+  "section2_solutions": {{
+    "solution1": {{
+      "titre": "Nom de la solution principale",
+      "presentation": "Présentation détaillée (issue de tes recherches).",
+      "architecture": "Description de l'architecture technique proposée.",
+      "fonctionnalites": ["Fonction 1", "Fonction 2"],
+      "avantages_limites": "Comparaison forces/faiblesses.",
+      "licence_support": "Détails sur le licensing et le support."
+    }},
+    "solution2": {{ "titre": "Alternative ou Option B", "presentation": "...", "architecture": "...", "fonctionnalites": [], "avantages_limites": "...", "licence_support": "..." }},
+    "solution3": {{ "titre": "Option C (si pertinent)", "presentation": "...", "architecture": "...", "fonctionnalites": [], "avantages_limites": "...", "licence_support": "..." }},
+    "comparaison_synthese": "Tableau ou paragraphe synthétisant pourquoi la solution 1 est recommandée."
+  }},
+  "section3_methodologie": {{
+    "phases": [
+      {{"nom": "Phase 1 : Préparation", "description": "...", "taches": []}},
+      {{"nom": "Phase 2 : Implémentation", "description": "...", "taches": []}},
+      {{"nom": "Phase 3 : Transfert et support", "description": "...", "taches": []}},
+      {{"nom": "Phase 4 : Clôture du contrat", "description": "...", "taches": []}}
+    ],
+    "planning_previsionnel": "Description du calendrier global (ex: Durée totale X semaines)."
+  }},
+  "section4_finances": {{
+    "recapitulatif": "Synthèse des coûts BOM et Prestations SOW.",
+    "total_ht": 0,
+    "devise": "MGA"
+  }},
+  "section5_annexes": ["Lien vers datasheets", "Certifications NextHope"]
+}}
 
-        model = _get_model()
+Retourne UNIQUEMENT le JSON."""
+
+        model = _get_model(use_search=use_search)
         response = await model.generate_content_async(prompt)
-
         ot_content = _extract_json_from_response(response.text)
+        
         if isinstance(ot_content, dict):
             return ot_content
-
-        return {"presentation_entreprise": response.text}
+        return {"error": "Format JSON invalide", "raw": response.text}
 
     except Exception as e:
         logger.error(f"Erreur lors de la génération OT via IA : {e}")

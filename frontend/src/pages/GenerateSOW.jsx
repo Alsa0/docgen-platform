@@ -13,6 +13,7 @@ const GenerateSOW = () => {
   const [bomItems, setBomItems] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [useAi, setUseAi] = useState(true);
+  const [exportFormat, setExportFormat] = useState('docx'); // Default to docx for SOW
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -37,7 +38,8 @@ const GenerateSOW = () => {
         useAi, 
         bomItems, 
         config.inclure_bom || false, 
-        false
+        false,
+        exportFormat
       );
     } catch (error) {
       console.error("Generation failed", error);
@@ -93,24 +95,41 @@ const GenerateSOW = () => {
               </label>
             </div>
             
-            <button 
-              className="btn btn-primary" 
-              style={{ padding: '12px 24px', fontSize: '1rem' }}
-              onClick={handleGenerate}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
-                  Génération en cours...
-                </>
-              ) : (
-                <>
-                  <Download size={18} />
-                  Générer le Document DOCX
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2 p-1 bg-black/20 rounded-lg">
+                <button 
+                  className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'docx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                  onClick={() => setExportFormat('docx')}
+                >
+                  Word
+                </button>
+                <button 
+                  className={`px-3 py-1 text-xs rounded-md transition-all ${exportFormat === 'xlsx' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500'}`}
+                  onClick={() => setExportFormat('xlsx')}
+                >
+                  Excel
+                </button>
+              </div>
+
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '12px 24px', fontSize: '1rem' }}
+                onClick={handleGenerate}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="spinner" style={{ width: '18px', height: '18px' }}></div>
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    Générer {exportFormat === 'xlsx' ? 'Excel (.xlsx)' : 'Word (.docx)'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
