@@ -2,7 +2,7 @@
 
 Une plateforme complète de génération de documents d'entreprise propulsée par l'IA Claude d'Anthropic. Conçue spécialement pour les professionnels de l'ingénierie IT et Télécom.
 
-## 📋 Présentation des 5 types de documents
+## Présentation des 5 types de documents
 
 La plateforme permet de générer 5 types de documents professionnels au format DOCX :
 
@@ -12,7 +12,7 @@ La plateforme permet de générer 5 types de documents professionnels au format 
 4. **IR (Rapport d'Intervention)** : Compte-rendu terrain avec analyse des problèmes et recommandations IA.
 5. **LLD (Low Level Design)** : Document technique d'architecture détaillé exploitant la recherche web pour les spécifications techniques.
 
-## 🛠️ Prérequis et Installation
+## Prérequis et Installation
 
 - **Backend** : Python 3.10+
 - **Frontend** : Node.js 18+
@@ -48,13 +48,13 @@ npm install
 npm run dev
 ```
 
-## 🔑 Configuration des clés API
+## Configuration des clés API
 
 Le fichier `backend/.env` nécessite :
 - `ANTHROPIC_API_KEY` : Clé API pour l'accès à Claude (modèle *claude-opus-4-6*).
 - `TAVILY_API_KEY` : Clé API optionnelle si web_search d'Anthropic requiert un provider externe.
 
-## 🚀 Guide d'utilisation
+## Guide d'utilisation
 
 1. Accédez à l'interface via votre navigateur.
 2. Sélectionnez le type de document à générer depuis le tableau de bord.
@@ -63,7 +63,7 @@ Le fichier `backend/.env` nécessite :
 5. Cochez l'option d'utilisation de l'IA (activée par défaut).
 6. Cliquez sur "Générer le Document DOCX". Le téléchargement démarrera automatiquement.
 
-## ➕ Ajouter un nouveau type de document
+## Ajouter un nouveau type de document
 
 L'architecture est pensée pour être facilement extensible :
 1. Créez un nouveau fichier `backend/templates/mon_doc.json` avec la définition des champs.
@@ -72,7 +72,7 @@ L'architecture est pensée pour être facilement extensible :
 4. Ajoutez la route correspondante dans `backend/routes/documents.py`.
 5. Côté frontend, ajoutez la carte sur `Home.jsx` et créez la page `GenerateMonDoc.jsx`.
 
-## 🏗️ Architecture Technique
+## Architecture Technique
 
 - **Backend** : FastAPI (Python) offre des performances élevées et gère les requêtes asynchrones vers l'API Claude. La génération de documents s'appuie sur `python-docx` pour un formatage professionnel précis.
 - **Frontend** : React propulsé par Vite pour une expérience utilisateur rapide et fluide. Le design utilise une approche Glassmorphism premium sans framework CSS externe.
